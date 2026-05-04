@@ -1,10 +1,13 @@
 export default function BottomNav({ activeTab, onTabChange, budgetAlertCount = 0 }) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100"
+      className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="flex h-16">
+      <div
+        className="mx-4 mb-3 glass-strong rounded-3xl flex items-center px-1 py-1.5 shadow-2xl"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06)' }}
+      >
         <NavBtn id="dashboard" active={activeTab === 'dashboard'} onClick={onTabChange} label="Accueil">
           <IconHome active={activeTab === 'dashboard'} />
         </NavBtn>
@@ -13,27 +16,34 @@ export default function BottomNav({ activeTab, onTabChange, budgetAlertCount = 0
           <IconCharts active={activeTab === 'charts'} />
         </NavBtn>
 
-        {/* Floating Add button */}
-        <div className="flex-1 flex flex-col items-center justify-start pt-1">
+        {/* Bouton Ajouter central */}
+        <div className="flex-1 flex justify-center items-center">
           <button
             onClick={() => onTabChange('add')}
-            className={`-mt-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors
-              ${activeTab === 'add' ? 'bg-blue-700' : 'bg-blue-600'}`}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95"
+            style={{
+              background: activeTab === 'add'
+                ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              boxShadow: activeTab === 'add'
+                ? '0 4px 20px rgba(79,70,229,0.6), inset 0 1px 0 rgba(255,255,255,0.2)'
+                : '0 4px 20px rgba(99,102,241,0.45), inset 0 1px 0 rgba(255,255,255,0.2)',
+            }}
           >
             <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
           </button>
-          <span className={`text-xs font-medium mt-0.5 ${activeTab === 'add' ? 'text-blue-600' : 'text-slate-400'}`}>
-            Ajouter
-          </span>
         </div>
 
         <NavBtn id="budget" active={activeTab === 'budget'} onClick={onTabChange} label="Budget">
           <div className="relative">
             <IconBudget active={activeTab === 'budget'} />
             {budgetAlertCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+              <span
+                className="absolute -top-1 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-white flex items-center justify-center"
+                style={{ fontSize: 9, fontWeight: 700, background: '#f43f5e' }}
+              >
                 {budgetAlertCount > 9 ? '9+' : budgetAlertCount}
               </span>
             )}
@@ -52,11 +62,16 @@ function NavBtn({ id, active, onClick, label, children }) {
   return (
     <button
       onClick={() => onClick(id)}
-      className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-        ${active ? 'text-blue-600' : 'text-slate-400'}`}
+      className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-all active:scale-95"
+      style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.35)' }}
     >
       {children}
-      <span className="text-xs font-medium">{label}</span>
+      <span
+        className="font-semibold transition-all"
+        style={{ fontSize: 10, color: active ? '#818cf8' : 'rgba(255,255,255,0.28)' }}
+      >
+        {label}
+      </span>
     </button>
   )
 }
@@ -72,8 +87,12 @@ function IconHome({ active }) {
 function IconCharts({ active }) {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" fill={active ? 'currentColor' : 'none'} />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" fill={active ? 'currentColor' : 'none'} />
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+        fill={active ? 'currentColor' : 'none'} />
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+        fill={active ? 'currentColor' : 'none'} />
     </svg>
   )
 }

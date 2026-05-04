@@ -19,7 +19,7 @@ const currentYearMonth = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-// ─── Donut Chart ─────────────────────────────────────────────────────────────
+// ─── Donut Chart ──────────────────────────────────────────────────────────────
 
 function DonutChart({ segments }) {
   const r = 40
@@ -28,7 +28,7 @@ function DonutChart({ segments }) {
   if (segments.length === 0) {
     return (
       <svg viewBox="0 0 100 100" className="w-40 h-40">
-        <circle cx={50} cy={50} r={r} fill="none" stroke="#e2e8f0" strokeWidth="12" />
+        <circle cx={50} cy={50} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" />
       </svg>
     )
   }
@@ -43,6 +43,7 @@ function DonutChart({ segments }) {
 
   return (
     <svg viewBox="0 0 100 100" className="w-40 h-40 -rotate-90">
+      <circle cx={50} cy={50} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
       {rendered.map((seg, i) => (
         <circle
           key={i}
@@ -53,6 +54,7 @@ function DonutChart({ segments }) {
           strokeDasharray={`${seg.len} ${circumference - seg.len}`}
           strokeDashoffset={-seg.startLen}
           strokeLinecap="butt"
+          opacity="0.9"
         />
       ))}
     </svg>
@@ -74,8 +76,8 @@ function BalanceLineChart({ transactions, months }) {
   if (data.length < 2) return null
 
   const W = 280
-  const H = 110
-  const PAD = { top: 12, right: 12, bottom: 22, left: 48 }
+  const H = 120
+  const PAD = { top: 14, right: 14, bottom: 26, left: 52 }
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
 
@@ -94,9 +96,12 @@ function BalanceLineChart({ transactions, months }) {
     : String(Math.round(v))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 110 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
+      {/* Zero line */}
       <line x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY}
-        stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+        stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="3,3" />
+
+      {/* Area fills */}
       {data.map((d, i) => {
         if (i === data.length - 1) return null
         const x1 = xOf(i), x2 = xOf(i + 1)
@@ -106,25 +111,35 @@ function BalanceLineChart({ transactions, months }) {
         return (
           <polygon key={i}
             points={`${x1},${zeroY} ${x1},${y1} ${x2},${y2} ${x2},${zeroY}`}
-            fill={positive ? '#d1fae5' : negative ? '#fee2e2' : '#f1f5f9'} opacity="0.7" />
+            fill={positive ? 'rgba(52,211,153,0.12)' : negative ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.04)'}
+          />
         )
       })}
-      <polyline points={pts} fill="none" stroke="#3b82f6"
-        strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+      {/* Line */}
+      <polyline points={pts} fill="none" stroke="#818cf8"
+        strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+      {/* Points */}
       {data.map((d, i) => (
-        <circle key={i} cx={xOf(i)} cy={yOf(d.net)} r="3"
-          fill={d.net >= 0 ? '#10b981' : '#ef4444'} stroke="white" strokeWidth="1.5" />
+        <circle key={i} cx={xOf(i)} cy={yOf(d.net)} r="4"
+          fill={d.net >= 0 ? '#34d399' : '#f87171'}
+          stroke="rgba(11,11,30,0.8)" strokeWidth="2" />
       ))}
+
+      {/* Labels X */}
       {data.map((d, i) => (
-        <text key={i} x={xOf(i)} y={H - 4} textAnchor="middle" fill="#94a3b8" fontSize="7.5">
+        <text key={i} x={xOf(i)} y={H - 4} textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="8">
           {monthShort(d.ym)}
         </text>
       ))}
-      <text x={PAD.left - 4} y={PAD.top + 4} textAnchor="end" fill="#94a3b8" fontSize="7">
+
+      {/* Labels Y */}
+      <text x={PAD.left - 6} y={PAD.top + 4} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize="7">
         {fmtAxis(maxVal)}€
       </text>
       {minVal < 0 && (
-        <text x={PAD.left - 4} y={PAD.top + cH + 4} textAnchor="end" fill="#94a3b8" fontSize="7">
+        <text x={PAD.left - 6} y={PAD.top + cH + 4} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize="7">
           {fmtAxis(minVal)}€
         </text>
       )}
@@ -153,7 +168,7 @@ function ComparisonChart({ transactions, monthA, monthB, customExpenseCats }) {
   }, [transactions, monthA, monthB])
 
   if (data.length === 0) {
-    return <p className="text-slate-400 text-sm text-center py-4">Aucune dépense sur ces mois</p>
+    return <p className="text-sm text-center py-4" style={{ color: 'rgba(255,255,255,0.35)' }}>Aucune dépense sur ces mois</p>
   }
 
   const maxVal = Math.max(...data.flatMap(d => [d.a, d.b]), 1)
@@ -161,15 +176,15 @@ function ComparisonChart({ transactions, monthA, monthB, customExpenseCats }) {
   const labelB = monthShort(monthB)
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex gap-4 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-blue-500" />
-          <span className="text-slate-500">{monthLabel(monthA)}</span>
+          <div className="w-3 h-3 rounded-sm" style={{ background: '#818cf8' }} />
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>{monthLabel(monthA)}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-violet-400" />
-          <span className="text-slate-500">{monthLabel(monthB)}</span>
+          <div className="w-3 h-3 rounded-sm" style={{ background: '#c084fc' }} />
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>{monthLabel(monthB)}</span>
         </div>
       </div>
 
@@ -179,28 +194,32 @@ function ComparisonChart({ transactions, monthA, monthB, customExpenseCats }) {
         const diff = row.b - row.a
         return (
           <div key={row.cat}>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className="text-base shrink-0">{getIconForCat(row.cat, customExpenseCats)}</span>
-              <span className="text-xs text-slate-600 flex-1 font-medium">{row.cat}</span>
+              <span className="text-xs flex-1 font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{row.cat}</span>
               {row.a > 0 && row.b > 0 && (
-                <span className={`text-xs font-semibold shrink-0 ${diff > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                <span className="text-xs font-bold shrink-0" style={{ color: diff > 0 ? '#f87171' : '#34d399' }}>
                   {diff > 0 ? '+' : ''}{fmt(diff)}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <div className="w-6 text-right text-xs text-slate-400 shrink-0">{labelA}</div>
-              <div className="flex-1 bg-slate-100 rounded-full h-2">
-                <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${pctA}%` }} />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 text-right text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>{labelA}</div>
+              <div className="flex-1 progress-track h-2">
+                <div className="h-2 rounded-full transition-all" style={{ width: `${pctA}%`, background: '#818cf8' }} />
               </div>
-              <div className="w-16 text-xs text-slate-600 shrink-0 text-right">{row.a > 0 ? fmt(row.a) : '—'}</div>
+              <div className="w-16 text-xs shrink-0 text-right" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {row.a > 0 ? fmt(row.a) : '—'}
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 text-right text-xs text-slate-400 shrink-0">{labelB}</div>
-              <div className="flex-1 bg-slate-100 rounded-full h-2">
-                <div className="h-2 rounded-full bg-violet-400 transition-all" style={{ width: `${pctB}%` }} />
+              <div className="w-6 text-right text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }}>{labelB}</div>
+              <div className="flex-1 progress-track h-2">
+                <div className="h-2 rounded-full transition-all" style={{ width: `${pctB}%`, background: '#c084fc' }} />
               </div>
-              <div className="w-16 text-xs text-slate-600 shrink-0 text-right">{row.b > 0 ? fmt(row.b) : '—'}</div>
+              <div className="w-16 text-xs shrink-0 text-right" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {row.b > 0 ? fmt(row.b) : '—'}
+              </div>
             </div>
           </div>
         )
@@ -216,7 +235,6 @@ function AdvancedStats({ transactions, customExpenseCats }) {
     const months = [...new Set(transactions.map(t => t.date.substring(0, 7)))].sort()
     if (months.length === 0) return null
 
-    // Monthly totals
     const monthlyIncome = {}
     const monthlyExpense = {}
     months.forEach(ym => {
@@ -233,144 +251,136 @@ function AdvancedStats({ transactions, customExpenseCats }) {
     const avgExpense = expenseValues.reduce((s, v) => s + v, 0) / months.length
     const avgNet = netValues.reduce((s, v) => s + v, 0) / months.length
 
-    // Best and worst months
-    const bestMonth = months.reduce((best, m) => {
-      const net = monthlyIncome[m] - monthlyExpense[m]
-      return net > (monthlyIncome[best] - monthlyExpense[best]) ? m : best
-    }, months[0])
+    const bestMonth = months.reduce((best, m) =>
+      (monthlyIncome[m] - monthlyExpense[m]) > (monthlyIncome[best] - monthlyExpense[best]) ? m : best, months[0])
+    const worstMonth = months.reduce((worst, m) =>
+      (monthlyIncome[m] - monthlyExpense[m]) < (monthlyIncome[worst] - monthlyExpense[worst]) ? m : worst, months[0])
 
-    const worstMonth = months.reduce((worst, m) => {
-      const net = monthlyIncome[m] - monthlyExpense[m]
-      return net < (monthlyIncome[worst] - monthlyExpense[worst]) ? m : worst
-    }, months[0])
-
-    // Category averages
     const catTotals = {}
-    const catMonths = {}
     transactions.filter(t => t.type === 'expense').forEach(t => {
       catTotals[t.category] = (catTotals[t.category] || 0) + t.amount
-      if (!catMonths[t.category]) catMonths[t.category] = new Set()
-      catMonths[t.category].add(t.date.substring(0, 7))
     })
 
     const catAvgs = Object.entries(catTotals)
-      .map(([cat, total], i) => ({
-        cat,
-        avg: total / months.length,
-        color: getColorForCat(cat, customExpenseCats, i),
-      }))
+      .map(([cat, total], i) => ({ cat, avg: total / months.length, color: getColorForCat(cat, customExpenseCats, i) }))
       .sort((a, b) => b.avg - a.avg)
 
-    // Current month vs 3-month avg
     const ym = currentYearMonth()
     const last3 = months.filter(m => m < ym).slice(-3)
     const currentExpense = monthlyExpense[ym] || 0
-    const avg3 = last3.length > 0
-      ? last3.reduce((s, m) => s + monthlyExpense[m], 0) / last3.length
-      : null
+    const avg3 = last3.length > 0 ? last3.reduce((s, m) => s + monthlyExpense[m], 0) / last3.length : null
 
     return {
       months, avgIncome, avgExpense, avgNet,
-      bestMonth, worstMonth, bestNet: monthlyIncome[bestMonth] - monthlyExpense[bestMonth],
+      bestMonth, worstMonth,
+      bestNet: monthlyIncome[bestMonth] - monthlyExpense[bestMonth],
       worstNet: monthlyIncome[worstMonth] - monthlyExpense[worstMonth],
       catAvgs, currentExpense, avg3, ym,
     }
   }, [transactions, customExpenseCats])
 
   if (!data || data.months.length === 0) {
-    return <p className="text-slate-400 text-sm text-center py-6">Pas assez de données</p>
+    return <p className="text-sm text-center py-6" style={{ color: 'rgba(255,255,255,0.35)' }}>Pas assez de données</p>
   }
 
   const maxAvg = Math.max(...data.catAvgs.map(c => c.avg), 1)
 
   return (
     <div className="space-y-4">
-      {/* Global averages */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+      {/* Moyennes */}
+      <div className="glass rounded-3xl p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
           Moyennes mensuelles ({data.months.length} mois)
-        </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500 flex items-center gap-1"><span className="text-emerald-500">↑</span> Revenus</span>
-            <span className="font-bold text-emerald-600">{fmt(data.avgIncome)}</span>
+        </p>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <span style={{ color: '#34d399' }}>↑</span> Revenus
+            </span>
+            <span className="font-bold text-sm" style={{ color: '#34d399' }}>{fmt(data.avgIncome)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500 flex items-center gap-1"><span className="text-rose-500">↓</span> Dépenses</span>
-            <span className="font-bold text-rose-600">{fmt(data.avgExpense)}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-sm flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <span style={{ color: '#f87171' }}>↓</span> Dépenses
+            </span>
+            <span className="font-bold text-sm" style={{ color: '#f87171' }}>{fmt(data.avgExpense)}</span>
           </div>
-          <div className="flex justify-between text-sm border-t border-slate-50 pt-2">
-            <span className="text-slate-500">Bilan net</span>
-            <span className={`font-bold ${data.avgNet >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div
+            className="flex justify-between items-center pt-3"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>Bilan net</span>
+            <span className="font-bold text-sm" style={{ color: data.avgNet >= 0 ? '#34d399' : '#f87171' }}>
               {data.avgNet >= 0 ? '+' : ''}{fmt(data.avgNet)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Current vs 3-month avg */}
+      {/* Ce mois vs 3 mois */}
       {data.avg3 !== null && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        <div className="glass rounded-3xl p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
             Ce mois vs moyenne 3 derniers mois
-          </h3>
-          <div className="flex justify-between items-end mb-2">
+          </p>
+          <div className="flex justify-between items-end mb-3">
             <div>
-              <p className="text-xs text-slate-400">Ce mois</p>
-              <p className="text-xl font-bold text-slate-800">{fmt(data.currentExpense)}</p>
+              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Ce mois</p>
+              <p className="text-2xl font-bold text-white">{fmt(data.currentExpense)}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-400">Moyenne 3 mois</p>
-              <p className="text-base font-semibold text-slate-600">{fmt(data.avg3)}</p>
+              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Moyenne 3 mois</p>
+              <p className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>{fmt(data.avg3)}</p>
             </div>
           </div>
-          {data.avg3 > 0 && (
-            <div className="flex items-center gap-2 text-xs">
-              {(() => {
-                const diff = data.currentExpense - data.avg3
-                const pct = Math.round(Math.abs(diff / data.avg3) * 100)
-                return (
-                  <span className={`font-semibold ${diff > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
-                    {diff > 0 ? '▲' : '▼'} {pct}% {diff > 0 ? 'au-dessus' : 'en-dessous'} de la moyenne
-                  </span>
-                )
-              })()}
-            </div>
-          )}
+          {data.avg3 > 0 && (() => {
+            const diff = data.currentExpense - data.avg3
+            const pct = Math.round(Math.abs(diff / data.avg3) * 100)
+            return (
+              <div
+                className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
+                style={{ background: diff > 0 ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)' }}
+              >
+                <span className="font-bold" style={{ color: diff > 0 ? '#f87171' : '#34d399' }}>
+                  {diff > 0 ? '▲' : '▼'} {pct}% {diff > 0 ? 'au-dessus' : 'en-dessous'} de la moyenne
+                </span>
+              </div>
+            )
+          })()}
         </div>
       )}
 
-      {/* Best/worst months */}
+      {/* Meilleur / pire mois */}
       {data.months.length >= 2 && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-            <p className="text-xs text-emerald-600 font-semibold mb-1">Meilleur mois</p>
-            <p className="text-sm font-bold text-emerald-700">{monthShort(data.bestMonth)}</p>
-            <p className="text-xs text-emerald-600 mt-1">{fmt(data.bestNet)}</p>
+          <div className="rounded-3xl p-4" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: '#34d399' }}>Meilleur mois</p>
+            <p className="text-base font-bold text-white">{monthShort(data.bestMonth)}</p>
+            <p className="text-xs mt-1" style={{ color: '#34d399' }}>{fmt(data.bestNet)}</p>
           </div>
-          <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100">
-            <p className="text-xs text-rose-600 font-semibold mb-1">Mois le plus chargé</p>
-            <p className="text-sm font-bold text-rose-700">{monthShort(data.worstMonth)}</p>
-            <p className="text-xs text-rose-600 mt-1">{fmt(data.worstNet)}</p>
+          <div className="rounded-3xl p-4" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: '#f87171' }}>Mois le plus chargé</p>
+            <p className="text-base font-bold text-white">{monthShort(data.worstMonth)}</p>
+            <p className="text-xs mt-1" style={{ color: '#f87171' }}>{fmt(data.worstNet)}</p>
           </div>
         </div>
       )}
 
-      {/* Category averages */}
+      {/* Moyennes par catégorie */}
       {data.catAvgs.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Dépense moyenne par catégorie / mois
-          </h3>
-          <div className="space-y-2.5">
+        <div className="glass rounded-3xl p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            Dépense moyenne / mois par catégorie
+          </p>
+          <div className="space-y-3">
             {data.catAvgs.map(row => (
               <div key={row.cat}>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-base shrink-0">{getIconForCat(row.cat, customExpenseCats)}</span>
-                  <span className="text-xs text-slate-600 flex-1">{row.cat}</span>
-                  <span className="text-xs font-bold text-slate-700">{fmt(row.avg)}</span>
+                  <span className="text-xs flex-1" style={{ color: 'rgba(255,255,255,0.65)' }}>{row.cat}</span>
+                  <span className="text-xs font-bold text-white">{fmt(row.avg)}</span>
                 </div>
-                <div className="flex-1 bg-slate-100 rounded-full h-1.5">
+                <div className="progress-track h-1.5">
                   <div
                     className="h-1.5 rounded-full transition-all"
                     style={{ width: `${(row.avg / maxAvg) * 100}%`, backgroundColor: row.color }}
@@ -395,11 +405,11 @@ function MonthSelector({ months, value, onChange, exclude }) {
           <button
             key={m}
             onClick={() => onChange(m)}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-              value === m
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-slate-600 border border-slate-200'
-            }`}
+            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all active:scale-95"
+            style={value === m
+              ? { background: 'rgba(99,102,241,0.3)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.45)' }
+              : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }
+            }
           >
             {monthLabel(m)}
           </button>
@@ -412,7 +422,7 @@ function MonthSelector({ months, value, onChange, exclude }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Charts({ transactions, customExpenseCats = [] }) {
-  const [mode, setMode] = useState('single') // 'single' | 'compare' | 'stats'
+  const [mode, setMode] = useState('single')
   const [selectedMonth, setSelectedMonth] = useState(currentYearMonth())
   const [compareMonth, setCompareMonth] = useState(null)
 
@@ -441,42 +451,37 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
 
   if (availableMonths.length === 0) {
     return (
-      <div className="p-4 text-center py-16">
-        <p className="text-4xl mb-3">📊</p>
-        <p className="text-slate-500 font-medium">Aucune donnée à afficher</p>
-        <p className="text-slate-400 text-sm mt-1">Ajoutez des transactions pour voir les graphiques</p>
+      <div className="px-4 text-center py-20">
+        <p className="text-5xl mb-4">📊</p>
+        <p className="font-semibold text-white" style={{ opacity: 0.6 }}>Aucune donnée à afficher</p>
+        <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Ajoutez des transactions pour voir les graphiques</p>
       </div>
     )
   }
 
-  return (
-    <div className="p-4 space-y-4">
-      {/* Header + toggle mode */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-800">Graphiques</h2>
-      </div>
+  const modeBtn = (id, label) => (
+    <button
+      key={id}
+      onClick={() => setMode(id)}
+      className="flex-1 px-2 py-2.5 rounded-xl text-xs font-bold transition-all"
+      style={mode === id
+        ? { background: 'rgba(255,255,255,0.12)', color: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }
+        : { color: 'rgba(255,255,255,0.38)' }
+      }
+    >
+      {label}
+    </button>
+  )
 
-      <div className="flex bg-slate-100 rounded-xl p-1 text-xs">
-        <button
-          onClick={() => setMode('single')}
-          className={`flex-1 px-2 py-2 rounded-lg font-semibold transition-all ${mode === 'single' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}
-        >
-          Mois
-        </button>
-        {availableMonths.length >= 2 && (
-          <button
-            onClick={() => setMode('compare')}
-            className={`flex-1 px-2 py-2 rounded-lg font-semibold transition-all ${mode === 'compare' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}
-          >
-            Comparer
-          </button>
-        )}
-        <button
-          onClick={() => setMode('stats')}
-          className={`flex-1 px-2 py-2 rounded-lg font-semibold transition-all ${mode === 'stats' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'}`}
-        >
-          Statistiques
-        </button>
+  return (
+    <div className="px-4 space-y-4 pb-4">
+      <h2 className="text-2xl font-bold tracking-tight text-white">Graphiques</h2>
+
+      {/* Toggle mode */}
+      <div className="glass rounded-2xl p-1 flex">
+        {modeBtn('single', 'Mois')}
+        {availableMonths.length >= 2 && modeBtn('compare', 'Comparer')}
+        {modeBtn('stats', 'Statistiques')}
       </div>
 
       {/* ── Vue mois unique ── */}
@@ -485,17 +490,17 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
           <MonthSelector months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
 
           {expenseByCategory.length > 0 ? (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
+            <div className="glass rounded-3xl p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 Dépenses par catégorie
-              </h3>
+              </p>
               <div className="flex items-center gap-4">
                 <div className="relative shrink-0">
                   <DonutChart segments={expenseByCategory} />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <p className="text-xs text-slate-400">Total</p>
-                      <p className="text-sm font-bold text-slate-700">{fmt(totalExpense)}</p>
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Total</p>
+                      <p className="text-sm font-bold text-white">{fmt(totalExpense)}</p>
                     </div>
                   </div>
                 </div>
@@ -503,10 +508,10 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
                   {expenseByCategory.map(d => (
                     <div key={d.cat} className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                      <span className="text-xs text-slate-600 truncate flex-1">
+                      <span className="text-xs truncate flex-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
                         {getIconForCat(d.cat, customExpenseCats)} {d.cat}
                       </span>
-                      <span className="text-xs font-semibold text-slate-700 shrink-0">
+                      <span className="text-xs font-bold text-white shrink-0">
                         {Math.round(d.pct)}%
                       </span>
                     </div>
@@ -515,16 +520,16 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-center">
-              <p className="text-slate-400 text-sm">Aucune dépense ce mois-ci</p>
+            <div className="glass rounded-3xl p-8 text-center">
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>Aucune dépense ce mois-ci</p>
             </div>
           )}
 
           {availableMonths.length >= 2 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            <div className="glass rounded-3xl p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 Bilan mensuel — 6 derniers mois
-              </h3>
+              </p>
               <BalanceLineChart transactions={transactions} months={availableMonths} />
             </div>
           )}
@@ -534,18 +539,21 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
       {/* ── Vue comparaison ── */}
       {mode === 'compare' && effectiveCompareMonth && (
         <>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div>
-              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1.5 px-1">Mois A</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#818cf8' }}>Mois A</p>
               <MonthSelector
                 months={availableMonths}
                 value={selectedMonth}
-                onChange={(m) => { setSelectedMonth(m); if (m === effectiveCompareMonth) setCompareMonth(availableMonths.find(x => x !== m) || null) }}
+                onChange={(m) => {
+                  setSelectedMonth(m)
+                  if (m === effectiveCompareMonth) setCompareMonth(availableMonths.find(x => x !== m) || null)
+                }}
                 exclude={effectiveCompareMonth}
               />
             </div>
             <div>
-              <p className="text-xs font-semibold text-violet-500 uppercase tracking-wider mb-1.5 px-1">Mois B</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#c084fc' }}>Mois B</p>
               <MonthSelector
                 months={availableMonths}
                 value={effectiveCompareMonth}
@@ -555,10 +563,10 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
+          <div className="glass rounded-3xl p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
               Dépenses par catégorie
-            </h3>
+            </p>
             <ComparisonChart
               transactions={transactions}
               monthA={selectedMonth}
@@ -569,7 +577,7 @@ export default function Charts({ transactions, customExpenseCats = [] }) {
         </>
       )}
 
-      {/* ── Vue statistiques avancées ── */}
+      {/* ── Vue statistiques ── */}
       {mode === 'stats' && (
         <AdvancedStats transactions={transactions} customExpenseCats={customExpenseCats} />
       )}

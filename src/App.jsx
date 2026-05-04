@@ -118,9 +118,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col max-w-md mx-auto relative">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto relative">
       <Header />
-      <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{
+          paddingTop: 'calc(5.5rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))',
+        }}
+      >
         {activeTab === 'dashboard' && (
           <Dashboard
             transactions={transactions}

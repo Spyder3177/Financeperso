@@ -32,6 +32,7 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
 
   const categories = type === 'income' ? incomeCats : expenseCats
   const visibleTemplates = templates.filter(t => t.type === type)
+  const isIncome = type === 'income'
 
   const handleTypeChange = (t) => {
     setType(t)
@@ -53,13 +54,12 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!amount || !category || parseFloat(amount) <= 0) return
-
     const tx = { type, amount: parseFloat(amount), category, description: description.trim(), date, account }
     onAdd(tx)
-
     if (saveAsRecurring) {
       const exists = templates.some(
-        t => t.type === tx.type && t.category === tx.category && t.description === tx.description && t.amount === tx.amount
+        t => t.type === tx.type && t.category === tx.category &&
+          t.description === tx.description && t.amount === tx.amount
       )
       if (!exists) {
         const updated = [...templates, { id: Date.now().toString(), type: tx.type, amount: tx.amount, category: tx.category, description: tx.description }]
@@ -69,7 +69,6 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
       setJustSaved(true)
       setTimeout(() => setJustSaved(false), 2000)
     }
-
     setAmount('')
     setCategory('')
     setDescription('')
@@ -77,65 +76,88 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
     setSaveAsRecurring(false)
   }
 
-  const isIncome = type === 'income'
+  const inputClass = 'glass-input w-full rounded-2xl px-4 py-3.5'
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-bold text-slate-800 mb-4">Nouvelle transaction</h2>
+    <div className="px-4 pb-4">
+      <h2 className="text-2xl font-bold text-white tracking-tight mb-5">Nouvelle transaction</h2>
 
       {/* Sélecteur compte */}
       {accounts?.length > 1 && (
-        <div className="flex bg-slate-100 rounded-xl p-1 mb-4">
+        <div className="glass rounded-2xl p-1 mb-4 flex">
           {accounts.map(a => (
             <button
               key={a.id}
               type="button"
               onClick={() => setAccount(a.id)}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                account === a.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
-              }`}
-            >{a.name}</button>
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={account === a.id
+                ? { background: 'rgba(255,255,255,0.12)', color: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }
+                : { color: 'rgba(255,255,255,0.4)' }
+              }
+            >
+              {a.name}
+            </button>
           ))}
         </div>
       )}
 
-      {/* Sélecteur type */}
-      <div className="flex bg-slate-100 rounded-xl p-1 mb-4">
+      {/* Sélecteur type — Dépense / Revenu */}
+      <div className="glass rounded-2xl p-1 mb-4 flex">
         <button
           type="button"
           onClick={() => handleTypeChange('expense')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-            !isIncome ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'
-          }`}
-        >Dépense</button>
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={!isIncome
+            ? { background: 'linear-gradient(135deg,#e11d48,#f43f5e)', color: 'white', boxShadow: '0 2px 10px rgba(244,63,94,0.35)' }
+            : { color: 'rgba(255,255,255,0.4)' }
+          }
+        >
+          Dépense
+        </button>
         <button
           type="button"
           onClick={() => handleTypeChange('income')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-            isIncome ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
-          }`}
-        >Revenu</button>
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={isIncome
+            ? { background: 'linear-gradient(135deg,#059669,#10b981)', color: 'white', boxShadow: '0 2px 10px rgba(16,185,129,0.35)' }
+            : { color: 'rgba(255,255,255,0.4)' }
+          }
+        >
+          Revenu
+        </button>
       </div>
 
       {/* Modèles récurrents */}
       {visibleTemplates.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Modèles</p>
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2.5 px-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            Modèles rapides
+          </p>
           <div className="overflow-x-auto -mx-4 px-4">
             <div className="flex gap-2 pb-1 w-max">
               {visibleTemplates.map(tpl => (
-                <div key={tpl.id} className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shrink-0">
+                <div
+                  key={tpl.id}
+                  className="glass rounded-2xl overflow-hidden shrink-0 flex items-center"
+                >
                   <button
                     type="button"
                     onClick={() => applyTemplate(tpl)}
-                    className="flex items-center gap-2 px-3 py-2 active:bg-slate-50"
+                    className="flex items-center gap-2 px-3 py-2.5 active:opacity-70"
                   >
                     <span className="text-lg">{getIconForCat(tpl.category, customExpenseCats)}</span>
                     <div className="text-left">
-                      <p className="text-xs font-semibold text-slate-700 max-w-[80px] truncate">
+                      <p
+                        className="text-xs font-semibold max-w-[80px] truncate"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      >
                         {tpl.description || tpl.category}
                       </p>
-                      <p className={`text-xs font-bold ${tpl.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      <p
+                        className="text-xs font-bold"
+                        style={{ color: tpl.type === 'income' ? '#34d399' : '#f87171' }}
+                      >
                         {fmt(tpl.amount)}
                       </p>
                     </div>
@@ -143,7 +165,8 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
                   <button
                     type="button"
                     onClick={() => deleteTemplate(tpl.id)}
-                    className="px-2 py-2 text-slate-300 hover:text-rose-400 transition-colors border-l border-slate-100"
+                    className="px-2.5 py-2.5 transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.2)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -156,9 +179,12 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Montant */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">Montant (€)</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Montant (€)
+          </label>
           <input
             type="number"
             inputMode="decimal"
@@ -168,17 +194,21 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
             onChange={e => setAmount(e.target.value)}
             placeholder="0,00"
             required
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-800 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={`${inputClass} text-2xl font-bold`}
+            style={{ letterSpacing: '-0.01em' }}
           />
         </div>
 
+        {/* Catégorie */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">Catégorie</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Catégorie
+          </label>
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
             required
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={`${inputClass} select-glass`}
           >
             <option value="">Sélectionner…</option>
             {categories.map(c => (
@@ -187,47 +217,61 @@ export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCa
           </select>
         </div>
 
+        {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">
-            Description <span className="text-slate-400 font-normal">(optionnel)</span>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Description <span style={{ color: 'rgba(255,255,255,0.2)', textTransform: 'none', fontWeight: 400 }}>(optionnel)</span>
           </label>
           <input
             type="text"
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="Ex : Courses Carrefour"
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
+        {/* Date */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">Date</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Date
+          </label>
           <input
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
             required
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
-        {/* Sauvegarder comme modèle */}
-        <label className="flex items-center gap-3 cursor-pointer select-none">
-          <div
-            onClick={() => setSaveAsRecurring(v => !v)}
-            className={`w-10 h-6 rounded-full transition-colors shrink-0 ${saveAsRecurring ? 'bg-blue-500' : 'bg-slate-200'}`}
-          >
-            <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${saveAsRecurring ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-          </div>
-          <span className="text-sm text-slate-600">
-            {justSaved ? '✓ Modèle sauvegardé' : 'Sauvegarder comme modèle récurrent'}
+        {/* Toggle modèle récurrent */}
+        <div
+          className="flex items-center justify-between px-4 py-3.5 rounded-2xl cursor-pointer"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+          onClick={() => setSaveAsRecurring(v => !v)}
+        >
+          <span className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {justSaved ? '✓ Modèle sauvegardé' : 'Sauvegarder comme modèle'}
           </span>
-        </label>
+          <div
+            className="w-11 h-6 rounded-full relative shrink-0 transition-all"
+            style={{
+              background: saveAsRecurring ? '#6366f1' : 'rgba(255,255,255,0.12)',
+              boxShadow: saveAsRecurring ? '0 0 12px rgba(99,102,241,0.4)' : 'none',
+            }}
+          >
+            <div
+              className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"
+              style={{ transform: saveAsRecurring ? 'translateX(21px)' : 'translateX(2px)' }}
+            />
+          </div>
+        </div>
 
+        {/* Submit */}
         <button
           type="submit"
-          className={`w-full py-4 rounded-xl text-white font-semibold text-base mt-2 transition-opacity active:opacity-80
-            ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`}
+          className={`w-full py-4 rounded-2xl text-white font-bold text-base mt-1 transition-all active:scale-98 ${isIncome ? 'btn-income' : 'btn-expense'}`}
         >
           Ajouter {isIncome ? 'le revenu' : 'la dépense'}
         </button>
