@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react'
-
-const INCOME_CATS = ['Salaire', 'Freelance', 'Investissements', 'Autres revenus']
-const EXPENSE_CATS = ['Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs', 'Shopping', 'Abonnements', 'Sorties', 'Autres']
+import { INCOME_CATS, EXPENSE_CATS, getIconForCat } from '../categories'
 
 const fmt = (amount) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -21,13 +19,7 @@ const currentYearMonth = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-const ICONS = {
-  'Salaire': '💼', 'Freelance': '💻', 'Investissements': '📈', 'Autres revenus': '💰',
-  'Alimentation': '🛒', 'Transport': '🚗', 'Logement': '🏠', 'Santé': '🏥',
-  'Loisirs': '🎮', 'Shopping': '🛍️', 'Abonnements': '📱', 'Sorties': '🍽️', 'Autres': '📦',
-}
-
-function EditRow({ transaction, accounts, onSave, onCancel }) {
+function EditRow({ transaction, accounts, expenseCats, incomeCats, customExpenseCats, onSave, onCancel }) {
   const [type, setType] = useState(transaction.type)
   const [amount, setAmount] = useState(String(transaction.amount))
   const [category, setCategory] = useState(transaction.category)
@@ -35,11 +27,11 @@ function EditRow({ transaction, accounts, onSave, onCancel }) {
   const [date, setDate] = useState(transaction.date)
   const [account, setAccount] = useState(transaction.account || accounts[0]?.id || '')
 
-  const cats = type === 'income' ? INCOME_CATS : EXPENSE_CATS
+  const cats = type === 'income' ? incomeCats : expenseCats
 
   const handleTypeChange = (t) => {
     setType(t)
-    const newCats = t === 'income' ? INCOME_CATS : EXPENSE_CATS
+    const newCats = t === 'income' ? incomeCats : expenseCats
     if (!newCats.includes(category)) setCategory(newCats[0])
   }
 
@@ -98,7 +90,38 @@ function EditRow({ transaction, accounts, onSave, onCancel }) {
   )
 }
 
-export default function TransactionList({ transactions, accounts, onDelete, onUpdate, onImport }) {
+function exportToCSV(transactions, selectedMonth) {
+  const headers = ['Date', 'Type', 'Montant', 'Catégorie', 'Description', 'Compte']
+  const rows = transactions.map(t => [
+    t.date,
+    t.type === 'income' ? 'Revenu' : 'Dépense',
+    t.amount.toFixed(2).replace('.', ','),
+    t.category,
+    t.description || '',
+    t.account || 'moi',
+  ])
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
+    .join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `transactions-${selectedMonth}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export default function TransactionList({
+  transactions,
+  accounts,
+  expenseCats,
+  incomeCats,
+  customExpenseCats = [],
+  onDelete,
+  onUpdate,
+  onImport,
+}) {
   const [selectedMonth, setSelectedMonth] = useState(currentYearMonth())
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -158,17 +181,30 @@ export default function TransactionList({ transactions, accounts, onDelete, onUp
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-slate-800">Historique</h2>
-        <button
-          onClick={onImport}
-          className="flex items-center gap-1.5 text-blue-600 text-sm font-semibold bg-blue-50 px-3 py-1.5 rounded-xl active:opacity-70"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          Importer CSV
-        </button>
+        <div className="flex gap-2">
+          {filtered.length > 0 && (
+            <button
+              onClick={() => exportToCSV(filtered, selectedMonth)}
+              className="flex items-center gap-1.5 text-emerald-600 text-sm font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl active:opacity-70"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Export
+            </button>
+          )}
+          <button
+            onClick={onImport}
+            className="flex items-center gap-1.5 text-blue-600 text-sm font-semibold bg-blue-50 px-3 py-1.5 rounded-xl active:opacity-70"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            Importer
+          </button>
+        </div>
       </div>
 
       {/* Filtre par compte */}
@@ -245,13 +281,16 @@ export default function TransactionList({ transactions, accounts, onDelete, onUp
                 <EditRow
                   transaction={t}
                   accounts={accounts}
+                  expenseCats={expenseCats}
+                  incomeCats={incomeCats}
+                  customExpenseCats={customExpenseCats}
                   onSave={(updates) => handleSaveEdit(t.id, updates)}
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${t.type === 'income' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                    {ICONS[t.category] ?? '💳'}
+                    {getIconForCat(t.category, customExpenseCats)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-800 text-sm font-medium truncate">{t.description || t.category}</p>
