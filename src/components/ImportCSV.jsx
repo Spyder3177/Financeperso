@@ -32,8 +32,7 @@ function autoCategory(libelle, type) {
 
 function parseAmount(str) {
   if (!str?.trim()) return 0
-  // Supprime espaces, séparateurs de milliers, puis remplace virgule par point
-  return parseFloat(str.replace(/\s/g, '').replace(/ /g, '').replace(',', '.')) || 0
+  return parseFloat(str.replace(/\s/g, '').replace(/ /g, '').replace(',', '.')) || 0
 }
 
 function parseDate(str) {
@@ -42,7 +41,6 @@ function parseDate(str) {
   return `${m[3]}-${m[2]}-${m[1]}`
 }
 
-// Tokeniseur CSV complet : gère les champs quotés avec retours à la ligne internes
 function tokenizeCSV(text, sep) {
   const rows = []
   let row = []
@@ -53,7 +51,7 @@ function tokenizeCSV(text, sep) {
   for (let i = 0; i < n; i++) {
     const c = text[i]
     if (c === '"') {
-      if (inQuote && text[i + 1] === '"') { field += '"'; i++ } // "" = guillemet échappé
+      if (inQuote && text[i + 1] === '"') { field += '"'; i++ }
       else inQuote = !inQuote
     } else if (c === sep && !inQuote) {
       row.push(field.trim()); field = ''
@@ -71,16 +69,11 @@ function tokenizeCSV(text, sep) {
 }
 
 function parseCSV(text) {
-  // Supprime le BOM UTF-8 si présent
   const clean = text.replace(/^﻿/, '')
-
-  // Détecte le séparateur sur les 20 premières lignes
   const sample = clean.slice(0, 2000)
   const sep = (sample.match(/;/g) || []).length >= (sample.match(/,/g) || []).length ? ';' : ','
-
   const allRows = tokenizeCSV(clean, sep)
 
-  // Trouve la ligne d'en-tête (contient "Date" en col 0 et "Libellé" quelque part)
   let headerRowIdx = -1
   for (let i = 0; i < allRows.length; i++) {
     const r = allRows[i]
@@ -93,7 +86,6 @@ function parseCSV(text) {
   const headers = allRows[headerRowIdx]
   const dateIdx    = headers.findIndex(h => /^date$/i.test(h))
   const libIdx     = headers.findIndex(h => /libell/i.test(h))
-  // Regex volontairement larges pour résister aux encodages et variantes de libellés
   const debitIdx   = headers.findIndex(h => /d.?bit/i.test(h))
   const creditIdx  = headers.findIndex(h => /cr.?dit/i.test(h))
   const montantIdx = headers.findIndex(h => /montant/i.test(h))
@@ -110,13 +102,11 @@ function parseCSV(text) {
     let amount = 0, type = null
 
     if (montantIdx >= 0 && creditIdx < 0) {
-      // Format avec colonne Montant unique (valeur négative = dépense)
       const v = parseAmount(cols[montantIdx] || '')
       if (v > 0)  { amount = v;  type = 'income' }
       if (v < 0)  { amount = -v; type = 'expense' }
     } else {
       const debit  = debitIdx  >= 0 ? parseAmount(cols[debitIdx]  || '') : 0
-      // Si pas de colonne crédit détectée, tente la 4e colonne (index 3) par défaut
       const cIdx   = creditIdx >= 0 ? creditIdx : 3
       const credit = cIdx < cols.length ? parseAmount(cols[cIdx] || '') : 0
       if (debit  > 0) { amount = debit;  type = 'expense' }
@@ -124,7 +114,8 @@ function parseCSV(text) {
     }
 
     if (type && amount > 0) {
-      txs.push({ date, description: libelle, amount, type, category: autoCategory(libelle, type) })
+      const cat = autoCategory(libelle, type)
+      txs.push({ date, description: libelle, amount, type, category: cat, _origCat: cat })
     }
   }
   if (txs.length === 0) throw new Error('Aucune transaction trouvée. Le fichier est peut-être vide ou dans un format inattendu.')
@@ -139,11 +130,12 @@ const CAT_ICONS = {
   'Loisirs':'🎮','Shopping':'🛍️','Abonnements':'📱','Sorties':'🍽️','Autres':'📦',
 }
 
-export default function ImportCSV({ onImport, onClose }) {
-  const [step, setStep]       = useState('upload')
-  const [rows, setRows]       = useState([])
-  const [remap, setRemap]     = useState({})  // { 'originalCat': 'newCat' }
-  const [error, setError]     = useState('')
+export default function ImportCSV({ onImport, onClose, accounts }) {
+  const [step, setStep]             = useState('upload')
+  const [rows, setRows]             = useState([])
+  const [viewMode, setViewMode]     = useState('grouped')   // 'grouped' | 'detail'
+  const [account, setAccount]       = useState(accounts?.[0]?.id || '')
+  const [error, setError]           = useState('')
   const [importedCount, setImportedCount] = useState(0)
   const fileRef = useRef()
 
@@ -156,7 +148,7 @@ export default function ImportCSV({ onImport, onClose }) {
       try {
         const txs = parseCSV(ev.target.result)
         setRows(txs)
-        setRemap({})
+        setViewMode('grouped')
         setStep('preview')
       } catch (err) {
         setError(err.message)
@@ -165,39 +157,51 @@ export default function ImportCSV({ onImport, onClose }) {
     reader.readAsText(file, 'latin1')
   }
 
-  // Résumé groupé par catégorie (applique les remappings)
+  // Change catégorie d'une transaction individuelle
+  const changeTxCategory = (idx, newCat) => {
+    setRows(prev => prev.map((r, i) => i === idx ? { ...r, category: newCat } : r))
+  }
+
+  // Change catégorie de tout un groupe (même _origCat + même type)
+  const changeGroupCategory = (origCat, type, newCat) => {
+    setRows(prev => prev.map(r =>
+      r._origCat === origCat && r.type === type ? { ...r, category: newCat } : r
+    ))
+  }
+
+  // Résumé groupé par catégorie courante
   const summary = useMemo(() => {
     const map = {}
     for (const r of rows) {
-      const cat = remap[r.category] ?? r.category
-      const key = `${r.type}|${cat}`
-      if (!map[key]) map[key] = { type: r.type, category: cat, originalCat: r.category, count: 0, total: 0 }
+      const key = `${r.type}|${r._origCat}`
+      if (!map[key]) map[key] = { type: r.type, origCat: r._origCat, currentCat: r.category, count: 0, total: 0 }
       map[key].count++
       map[key].total += r.amount
+      // Si le groupe a des catégories mixtes (modifications partielles), on le note
+      if (map[key].currentCat !== r.category) map[key].currentCat = '__mixed__'
     }
     return Object.values(map).sort((a, b) => b.total - a.total)
-  }, [rows, remap])
+  }, [rows])
 
   const dateRange = useMemo(() => {
     if (!rows.length) return ''
     const dates = rows.map(r => r.date).sort()
-    const fmt2 = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
-    const first = fmt2(dates[0])
-    const last  = fmt2(dates[dates.length - 1])
+    const f = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+    const first = f(dates[0]), last = f(dates[dates.length - 1])
     return first === last ? first : `${first} → ${last}`
   }, [rows])
 
   const totalIncome  = useMemo(() => rows.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0), [rows])
   const totalExpense = useMemo(() => rows.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0), [rows])
 
-  const handleRemap = (originalCat, newCat) => {
-    setRemap(prev => ({ ...prev, [originalCat]: newCat }))
-  }
-
   const handleImport = () => {
     const toImport = rows.map(r => ({
-      ...r,
-      category: remap[r.category] ?? r.category,
+      date: r.date,
+      description: r.description,
+      amount: r.amount,
+      type: r.type,
+      category: r.category,
+      account,
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`
     }))
     setImportedCount(toImport.length)
@@ -226,6 +230,25 @@ export default function ImportCSV({ onImport, onClose }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
           </div>
+
+          {/* Sélecteur de compte */}
+          {accounts?.length > 1 && (
+            <div className="w-full">
+              <p className="text-sm font-medium text-slate-600 text-center mb-2">Pour quel compte ?</p>
+              <div className="flex bg-slate-100 rounded-xl p-1">
+                {accounts.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setAccount(a.id)}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      account === a.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >{a.name}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="text-center">
             <p className="font-semibold text-slate-800 mb-1">Sélectionner ton fichier CSV</p>
             <p className="text-slate-400 text-sm">Export Crédit Agricole · Format .csv</p>
@@ -254,7 +277,7 @@ export default function ImportCSV({ onImport, onClose }) {
               <p className="font-semibold text-slate-800">{rows.length} transactions</p>
               <p className="text-slate-400 text-sm">{dateRange}</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 mb-3">
               <div className="flex-1 bg-emerald-50 rounded-xl px-3 py-2">
                 <p className="text-xs text-emerald-600 mb-0.5">Revenus</p>
                 <p className="font-bold text-emerald-700 text-sm">{fmt(totalIncome)}</p>
@@ -264,40 +287,97 @@ export default function ImportCSV({ onImport, onClose }) {
                 <p className="font-bold text-rose-700 text-sm">{fmt(totalExpense)}</p>
               </div>
             </div>
+            {/* Compte cible */}
+            {accounts?.length > 1 && (
+              <div className="flex bg-white rounded-xl p-1 border border-slate-200">
+                {accounts.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setAccount(a.id)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      account === a.id ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500'
+                    }`}
+                  >{a.name}</button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <p className="px-4 pt-3 pb-1 text-xs text-slate-400 shrink-0">
-            Tu peux ajuster les catégories avant d'importer
-          </p>
+          {/* Toggle vue */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+            <p className="text-xs text-slate-400">Ajuste les catégories avant d'importer</p>
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode('grouped')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'grouped' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'
+                }`}
+              >Groupé</button>
+              <button
+                onClick={() => setViewMode('detail')}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'detail' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'
+                }`}
+              >Détail</button>
+            </div>
+          </div>
 
-          {/* Liste groupée par catégorie */}
-          <div className="flex-1 overflow-y-auto">
-            {summary.map(g => {
-              const cats = g.type === 'income' ? INCOME_CATS : EXPENSE_CATS
-              return (
-                <div key={`${g.type}|${g.category}`} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50">
-                  <span className="text-2xl shrink-0">{CAT_ICONS[g.category] ?? '💳'}</span>
-                  <div className="flex-1 min-w-0">
-                    <select
-                      value={g.category}
-                      onChange={e => {
-                        // trouve la catégorie originale pour ce groupe
-                        const origCat = Object.keys(remap).find(k => (remap[k] ?? k) === g.category) ?? g.category
-                        handleRemap(origCat, e.target.value)
-                      }}
-                      className="text-sm font-medium text-slate-800 bg-transparent border-0 focus:outline-none focus:ring-0 p-0 w-full"
-                    >
-                      {ALL_CATS.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <p className="text-xs text-slate-400">{g.count} transaction{g.count > 1 ? 's' : ''}</p>
+          {/* Vue groupée */}
+          {viewMode === 'grouped' && (
+            <div className="flex-1 overflow-y-auto">
+              {summary.map(g => {
+                const cats = g.type === 'income' ? INCOME_CATS : EXPENSE_CATS
+                const displayCat = g.currentCat === '__mixed__' ? '' : g.currentCat
+                return (
+                  <div key={`${g.type}|${g.origCat}`} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50">
+                    <span className="text-2xl shrink-0">{CAT_ICONS[displayCat || g.origCat] ?? '💳'}</span>
+                    <div className="flex-1 min-w-0">
+                      <select
+                        value={displayCat}
+                        onChange={e => changeGroupCategory(g.origCat, g.type, e.target.value)}
+                        className="text-sm font-medium text-slate-800 bg-transparent border-0 focus:outline-none focus:ring-0 p-0 w-full"
+                      >
+                        {g.currentCat === '__mixed__' && <option value="">— Mixte —</option>}
+                        {ALL_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <p className="text-xs text-slate-400">{g.count} transaction{g.count > 1 ? 's' : ''}</p>
+                    </div>
+                    <p className={`text-sm font-semibold shrink-0 ${g.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {g.type === 'income' ? '+' : '−'}{fmt(g.total)}
+                    </p>
                   </div>
-                  <p className={`text-sm font-semibold shrink-0 ${g.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {g.type === 'income' ? '+' : '−'}{fmt(g.total)}
+                )
+              })}
+            </div>
+          )}
+
+          {/* Vue détaillée */}
+          {viewMode === 'detail' && (
+            <div className="flex-1 overflow-y-auto">
+              {rows.map((r, idx) => (
+                <div key={idx} className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-50">
+                  <span className="text-xl shrink-0">{CAT_ICONS[r.category] ?? '💳'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-700 truncate font-medium">{r.description}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-slate-400">{new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
+                      <span className="text-slate-200">·</span>
+                      <select
+                        value={r.category}
+                        onChange={e => changeTxCategory(idx, e.target.value)}
+                        className="text-xs text-blue-600 bg-transparent border-0 focus:outline-none p-0 font-medium"
+                      >
+                        {ALL_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p className={`text-sm font-semibold shrink-0 ${r.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {r.type === 'income' ? '+' : '−'}{fmt(r.amount)}
                   </p>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="p-4 border-t border-slate-100 shrink-0" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
             <button
@@ -305,6 +385,7 @@ export default function ImportCSV({ onImport, onClose }) {
               className="w-full py-4 rounded-xl text-white font-semibold bg-blue-600 active:opacity-80"
             >
               Importer {rows.length} transactions
+              {accounts?.length > 1 && <span className="font-normal opacity-80"> → {accounts.find(a => a.id === account)?.name}</span>}
             </button>
           </div>
         </>

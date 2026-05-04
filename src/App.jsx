@@ -8,6 +8,11 @@ import ImportCSV from './components/ImportCSV'
 
 const STORAGE_KEY = 'financeperso_v1'
 
+export const DEFAULT_ACCOUNTS = [
+  { id: 'moi', name: 'Moi' },
+  { id: 'conjointe', name: 'Conjointe' },
+]
+
 export default function App() {
   const [transactions, setTransactions] = useState(() => {
     try {
@@ -17,6 +22,7 @@ export default function App() {
       return []
     }
   })
+  const accounts = DEFAULT_ACCOUNTS
   const [activeTab, setActiveTab] = useState('dashboard')
   const [showImport, setShowImport] = useState(false)
 
@@ -33,6 +39,10 @@ export default function App() {
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
+  const updateTransaction = (id, updates) => {
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+  }
+
   const importTransactions = (txs) => {
     setTransactions(prev => {
       const existingKeys = new Set(prev.map(t => `${t.date}|${t.amount}|${t.description}`))
@@ -47,15 +57,17 @@ export default function App() {
       <Header />
       <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         {activeTab === 'dashboard' && (
-          <Dashboard transactions={transactions} onAddClick={() => setActiveTab('add')} />
+          <Dashboard transactions={transactions} accounts={accounts} onAddClick={() => setActiveTab('add')} />
         )}
         {activeTab === 'add' && (
-          <TransactionForm onAdd={addTransaction} />
+          <TransactionForm onAdd={addTransaction} accounts={accounts} />
         )}
         {activeTab === 'history' && (
           <TransactionList
             transactions={transactions}
+            accounts={accounts}
             onDelete={deleteTransaction}
+            onUpdate={updateTransaction}
             onImport={() => setShowImport(true)}
           />
         )}
@@ -66,6 +78,7 @@ export default function App() {
         <ImportCSV
           onImport={importTransactions}
           onClose={() => setShowImport(false)}
+          accounts={accounts}
         />
       )}
     </div>
