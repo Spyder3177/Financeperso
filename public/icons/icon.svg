@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="110" fill="#2563eb"/>
+  <!-- Portefeuille -->
+  <rect x="96" y="160" width="320" height="210" rx="28" fill="white" opacity="0.95"/>
+  <rect x="96" y="160" width="320" height="70" rx="28" fill="#1d4ed8"/>
+  <rect x="96" y="205" width="320" height="25" fill="#1d4ed8"/>
+  <!-- Poche -->
+  <rect x="300" y="248" width="116" height="70" rx="20" fill="#2563eb"/>
+  <circle cx="358" cy="283" r="18" fill="white" opacity="0.3"/>
+  <circle cx="358" cy="283" r="10" fill="white" opacity="0.8"/>
+  <!-- Lignes décoratives -->
+  <rect x="128" y="268" width="140" height="14" rx="7" fill="#e2e8f0"/>
+  <rect x="128" y="295" width="100" height="11" rx="5.5" fill="#e2e8f0" opacity="0.7"/>
+  <!-- Symbole euro dans l'en-tête -->
+  <text x="256" y="214" font-size="40" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-weight="bold" opacity="0.9">€</text>
+</svg>
