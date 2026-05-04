@@ -4,7 +4,7 @@ Application de gestion des finances personnelles — PWA installable sur iPhone 
 
 ---
 
-## Version actuelle : 1.4.0 (04/05/2026)
+## Version actuelle : 1.5.0 (04/05/2026)
 
 ---
 
@@ -37,6 +37,40 @@ npm run preview
 ---
 
 ## Historique des versions
+
+### Version 1.5.0 — 04/05/2026 — Export, épargne, prévisions, statistiques, alertes, catégories custom
+
+**Export CSV (`Historique`)**
+- Bouton "Export" pour télécharger les transactions du mois sélectionné au format CSV (UTF-8 avec BOM, compatible Excel et Numbers)
+
+**Objectifs d'épargne (`Budget → Épargne`)**
+- Créez des objectifs avec nom, emoji, montant cible, montant déjà épargné et échéance optionnelle
+- Jauge de progression colorée (bleue / amber / verte selon l'avancement)
+- Alerte sur l'échéance (rouge / amber selon le délai restant)
+- Récapitulatif global si plusieurs objectifs
+
+**Prévisions de fin de mois (`Accueil`)**
+- Carte affichant les dépenses projetées basées sur la moyenne journalière du mois en cours
+- Delta coloré vs le mois précédent (rouge si tendance à la hausse, vert sinon)
+- Nombre de jours restants et montant déjà dépensé
+
+**Statistiques avancées (`Graphiques → Statistiques`)**
+- Moyennes mensuelles revenus / dépenses / bilan net (sur toute la période)
+- Ce mois vs moyenne des 3 mois précédents avec écart en pourcentage
+- Meilleur mois (bilan le plus élevé) et mois le plus chargé
+- Dépense moyenne par catégorie avec barres proportionnelles colorées
+
+**Notifications budget (`Accueil` + `Budget`)**
+- Bannière amber quand une catégorie atteint ≥ 80 % de son enveloppe
+- Bannière rouge en cas de dépassement, avec le montant excédentaire
+- Badge numérique rouge sur l'onglet Budget dans la barre de navigation
+
+**Catégories personnalisables (`Budget → Catégories`)**
+- Ajoutez des catégories de dépenses custom avec un nom et un emoji (picker intégré)
+- Supprimez vos catégories personnalisées à tout moment
+- Les catégories custom apparaissent partout : formulaire d'ajout, édition inline, budgets, graphiques
+
+---
 
 ### Version 1.4.0 — 04/05/2026 — Édition, comptes séparés, catégories par transaction
 
@@ -146,15 +180,17 @@ financeperso/
 │       └── apple-touch-icon.png   # Icône iOS (180×180)
 ├── src/
 │   ├── components/
-│   │   ├── BottomNav.jsx          # Navigation bas de page (5 onglets)
-│   │   ├── Budget.jsx             # Enveloppes budget par catégorie
-│   │   ├── Charts.jsx             # Graphiques SVG + comparaison mois
-│   │   ├── Dashboard.jsx          # Tableau de bord + filtre par compte
+│   │   ├── BottomNav.jsx          # Navigation bas de page (5 onglets + badge alerte)
+│   │   ├── Budget.jsx             # Sous-onglets : Enveloppes / Épargne / Catégories
+│   │   ├── Charts.jsx             # Graphiques SVG + comparaison + statistiques avancées
+│   │   ├── Dashboard.jsx          # Tableau de bord + prévision fin de mois + alertes
 │   │   ├── Header.jsx             # En-tête (affiche la version)
 │   │   ├── ImportCSV.jsx          # Parseur CSV Crédit Agricole
-│   │   ├── TransactionForm.jsx    # Formulaire d'ajout + sélecteur compte
-│   │   └── TransactionList.jsx    # Historique + édition inline + filtre compte
-│   ├── App.jsx                    # Composant racine + état global + DEFAULT_ACCOUNTS
+│   │   ├── SavingsGoals.jsx       # Objectifs d'épargne avec jauges
+│   │   ├── TransactionForm.jsx    # Formulaire d'ajout + catégories custom
+│   │   └── TransactionList.jsx    # Historique + édition inline + export CSV
+│   ├── App.jsx                    # Composant racine + état global (transactions, budgets, goals, cats)
+│   ├── categories.js              # Constantes partagées : catégories, icônes, couleurs
 │   ├── index.css                  # Styles globaux (Tailwind)
 │   ├── main.jsx                   # Point d'entrée React
 │   └── version.js                 # Numéro de version (source unique)
@@ -171,5 +207,6 @@ financeperso/
 ## Notes
 
 - Le fichier `src/version.js` est la **source unique** du numéro de version. Modifier uniquement ce fichier lors d'une mise à jour.
-- Les données sont stockées dans le `localStorage` sous la clé `financeperso_v1`. Elles ne sont pas synchronisées entre appareils.
+- Le fichier `src/categories.js` est la **source unique** des catégories, icônes et couleurs. Toute modification des catégories par défaut se fait ici.
+- Les données sont stockées dans le `localStorage`. Clés : `financeperso_v1` (transactions), `financeperso_budgets_v1` (budgets), `financeperso_goals_v1` (objectifs), `financeperso_cats_v1` (catégories custom), `financeperso_recurring_v1` (modèles). Elles ne sont pas synchronisées entre appareils.
 - Les comptes (Moi / Conjointe) sont définis dans `src/App.jsx` → `DEFAULT_ACCOUNTS`.

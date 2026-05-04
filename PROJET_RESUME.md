@@ -19,6 +19,8 @@ PWA de gestion des finances personnelles, installable sur iPhone via Safari.
 | `financeperso_v1` | Tableau de toutes les transactions |
 | `financeperso_budgets_v1` | Objet `{ catégorie: montantMax }` |
 | `financeperso_recurring_v1` | Tableau de modèles récurrents `{ id, type, amount, category, description }` |
+| `financeperso_goals_v1` | Tableau d'objectifs d'épargne `{ id, name, emoji, target, saved, deadline }` |
+| `financeperso_cats_v1` | Tableau de catégories custom `{ name, icon }` |
 
 ## Structure d'une transaction
 ```js
@@ -34,6 +36,15 @@ PWA de gestion des finances personnelles, installable sur iPhone via Safari.
 ```
 
 ## Versions livrées
+
+### v1.5.0
+- **Export CSV** : bouton dans l'Historique pour télécharger les transactions du mois filtré (UTF-8, compatible Excel/Numbers)
+- **Objectifs d'épargne** : sous-onglet "Épargne" dans Budget — création d'objectifs avec nom, emoji, montant cible, montant épargné, échéance optionnelle ; jauges de progression + récapitulatif global
+- **Prévisions fin de mois** : carte dans Dashboard calculant les dépenses projetées (moyenne journalière × jours restants) et le delta vs mois précédent
+- **Statistiques avancées** : 3e mode "Statistiques" dans Graphiques — moyennes mensuelles revenus/dépenses/bilan, ce mois vs moyenne 3 mois glissants, meilleur/pire mois, dépense moyenne par catégorie
+- **Notifications budget** : bannière d'alerte amber (≥80%) / rouge (>100%) dans Dashboard et Budget, badge numérique sur l'onglet Budget dans la nav
+- **Catégories personnalisables** : sous-onglet "Catégories" dans Budget pour ajouter/supprimer des catégories de dépenses custom avec emoji ; propagation dans formulaire, édition, graphiques et budgets
+- **Refacto** : catégories centralisées dans `src/categories.js` ; état `budgets` et `goals` levé dans `App.jsx`
 
 ### v1.0.0
 Tableau de bord (solde total, stats du mois), ajout manuel de transactions (dépenses/revenus), historique par mois avec suppression, PWA iPhone.
@@ -60,18 +71,20 @@ Import CSV Crédit Agricole : parseur complet gérant les champs quotés multi-l
 ```
 src/
 ├── version.js                ← numéro de version (à incrémenter)
-├── App.jsx                   ← état global + routing onglets + DEFAULT_ACCOUNTS
+├── categories.js             ← EXPENSE_CATS, INCOME_CATS, ICONS, COLORS, helpers (source unique)
+├── App.jsx                   ← état global (transactions, budgets, goals, customCats) + routing
 ├── index.css
 ├── main.jsx
 └── components/
     ├── Header.jsx            ← affiche la version
-    ├── BottomNav.jsx         ← 5 onglets : dashboard / charts / add / budget / history
-    ├── Dashboard.jsx         ← solde total, stats mois, filtre par compte
-    ├── TransactionForm.jsx   ← ajout manuel + sélecteur compte
-    ├── TransactionList.jsx   ← historique par mois + édition inline + filtre compte
+    ├── BottomNav.jsx         ← 5 onglets + badge alerte budget
+    ├── Dashboard.jsx         ← solde, stats mois, prévision fin de mois, alerte budget
+    ├── TransactionForm.jsx   ← ajout manuel + sélecteur compte + catégories custom
+    ├── TransactionList.jsx   ← historique + édition inline + filtre compte + export CSV
     ├── ImportCSV.jsx         ← parseur CSV Crédit Agricole (tokeniseur, 30+ règles, vue groupée/détail)
-    ├── Charts.jsx            ← camembert SVG + courbe bilan + comparaison mois
-    └── Budget.jsx            ← enveloppes par catégorie, barres de progression
+    ├── Charts.jsx            ← camembert SVG + courbe bilan + comparaison mois + statistiques avancées
+    ├── Budget.jsx            ← sous-onglets : Enveloppes / Épargne / Catégories
+    └── SavingsGoals.jsx      ← objectifs d'épargne avec jauges et échéances
 ```
 
 ## Catégories
@@ -97,9 +110,9 @@ Les transactions sans champ `account` sont rattachées à `'moi'` par défaut.
 3. Merger sur `main` → déploiement automatique
 
 ## Prochaines fonctionnalités possibles
-- Export CSV des transactions
-- Objectifs d'épargne (savings goals avec jauge de progression)
-- Prévisions de fin de mois (projection à J+X basée sur la tendance du mois)
-- Statistiques avancées (moyenne mensuelle par catégorie, tendances)
-- Notifications budget (alerte quand proche de la limite)
-- Catégories personnalisables par l'utilisateur
+- Multi-devises (EUR/USD/GBP avec taux de change)
+- Synchronisation entre appareils (backend léger ou Supabase)
+- Import d'autres formats CSV (LCL, BNP, Boursorama…)
+- Rapports PDF mensuels exportables
+- Tags libres sur les transactions (en complément des catégories)
+- Widget iOS (Scriptable) affichant le solde du jour

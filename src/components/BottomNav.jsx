@@ -1,4 +1,4 @@
-export default function BottomNav({ activeTab, onTabChange }) {
+export default function BottomNav({ activeTab, onTabChange, budgetAlertCount = 0 }) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100"
@@ -30,7 +30,14 @@ export default function BottomNav({ activeTab, onTabChange }) {
         </div>
 
         <NavBtn id="budget" active={activeTab === 'budget'} onClick={onTabChange} label="Budget">
-          <IconBudget active={activeTab === 'budget'} />
+          <div className="relative">
+            <IconBudget active={activeTab === 'budget'} />
+            {budgetAlertCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+                {budgetAlertCount > 9 ? '9+' : budgetAlertCount}
+              </span>
+            )}
+          </div>
         </NavBtn>
 
         <NavBtn id="history" active={activeTab === 'history'} onClick={onTabChange} label="Historique">
