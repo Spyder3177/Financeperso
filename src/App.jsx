@@ -3,6 +3,8 @@ import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 import TransactionForm from './components/TransactionForm'
 import TransactionList from './components/TransactionList'
+import Charts from './components/Charts'
+import Budget from './components/Budget'
 import BottomNav from './components/BottomNav'
 import ImportCSV from './components/ImportCSV'
 
@@ -51,6 +53,12 @@ export default function App() {
         )}
         {activeTab === 'add' && (
           <TransactionForm onAdd={addTransaction} />
+        )}
+        {activeTab === 'charts' && (
+          <Charts transactions={transactions} />
+        )}
+        {activeTab === 'budget' && (
+          <Budget transactions={transactions} />
         )}
         {activeTab === 'history' && (
           <TransactionList

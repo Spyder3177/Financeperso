@@ -9,7 +9,11 @@ export default function BottomNav({ activeTab, onTabChange }) {
           <IconHome active={activeTab === 'dashboard'} />
         </NavBtn>
 
-        {/* Bouton central Ajouter */}
+        <NavBtn id="charts" active={activeTab === 'charts'} onClick={onTabChange} label="Graphiques">
+          <IconCharts active={activeTab === 'charts'} />
+        </NavBtn>
+
+        {/* Floating Add button */}
         <div className="flex-1 flex flex-col items-center justify-start pt-1">
           <button
             onClick={() => onTabChange('add')}
@@ -24,6 +28,10 @@ export default function BottomNav({ activeTab, onTabChange }) {
             Ajouter
           </span>
         </div>
+
+        <NavBtn id="budget" active={activeTab === 'budget'} onClick={onTabChange} label="Budget">
+          <IconBudget active={activeTab === 'budget'} />
+        </NavBtn>
 
         <NavBtn id="history" active={activeTab === 'history'} onClick={onTabChange} label="Historique">
           <IconHistory active={activeTab === 'history'} />
@@ -50,6 +58,23 @@ function IconHome({ active }) {
   return (
     <svg className="w-6 h-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )
+}
+
+function IconCharts({ active }) {
+  return (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" fill={active ? 'currentColor' : 'none'} />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" fill={active ? 'currentColor' : 'none'} />
+    </svg>
+  )
+}
+
+function IconBudget({ active }) {
+  return (
+    <svg className="w-6 h-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   )
 }
