@@ -1,9 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const INCOME_CATS = ['Salaire', 'Freelance', 'Investissements', 'Autres revenus']
 const EXPENSE_CATS = ['Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs', 'Shopping', 'Abonnements', 'Sorties', 'Autres']
+const RECURRING_KEY = 'financeperso_recurring_v1'
+
+const fmt = (amount) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+
+const ICONS = {
+  'Salaire': '💼', 'Freelance': '💻', 'Investissements': '📈', 'Autres revenus': '💰',
+  'Alimentation': '🛒', 'Transport': '🚗', 'Logement': '🏠', 'Santé': '🏥',
+  'Loisirs': '🎮', 'Shopping': '🛍️', 'Abonnements': '📱', 'Sorties': '🍽️', 'Autres': '📦',
+}
 
 const todayStr = () => new Date().toISOString().split('T')[0]
+
+const loadTemplates = () => {
+  try {
+    const stored = localStorage.getItem(RECURRING_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch { return [] }
+}
+
+const saveTemplates = (list) => {
+  localStorage.setItem(RECURRING_KEY, JSON.stringify(list))
+}
 
 export default function TransactionForm({ onAdd }) {
   const [type, setType] = useState('expense')
@@ -11,22 +32,56 @@ export default function TransactionForm({ onAdd }) {
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(todayStr())
+  const [saveAsRecurring, setSaveAsRecurring] = useState(false)
+  const [templates, setTemplates] = useState(loadTemplates)
+  const [justSaved, setJustSaved] = useState(false)
 
   const categories = type === 'income' ? INCOME_CATS : EXPENSE_CATS
+
+  const visibleTemplates = templates.filter(t => t.type === type)
 
   const handleTypeChange = (t) => {
     setType(t)
     setCategory('')
   }
 
+  const applyTemplate = (tpl) => {
+    setAmount(String(tpl.amount))
+    setCategory(tpl.category)
+    setDescription(tpl.description)
+  }
+
+  const deleteTemplate = (id) => {
+    const updated = templates.filter(t => t.id !== id)
+    setTemplates(updated)
+    saveTemplates(updated)
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!amount || !category || parseFloat(amount) <= 0) return
-    onAdd({ type, amount: parseFloat(amount), category, description: description.trim(), date })
+
+    const tx = { type, amount: parseFloat(amount), category, description: description.trim(), date }
+    onAdd(tx)
+
+    if (saveAsRecurring) {
+      const exists = templates.some(
+        t => t.type === tx.type && t.category === tx.category && t.description === tx.description && t.amount === tx.amount
+      )
+      if (!exists) {
+        const updated = [...templates, { id: Date.now().toString(), type: tx.type, amount: tx.amount, category: tx.category, description: tx.description }]
+        setTemplates(updated)
+        saveTemplates(updated)
+      }
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 2000)
+    }
+
     setAmount('')
     setCategory('')
     setDescription('')
     setDate(todayStr())
+    setSaveAsRecurring(false)
   }
 
   const isIncome = type === 'income'
@@ -36,7 +91,7 @@ export default function TransactionForm({ onAdd }) {
       <h2 className="text-lg font-bold text-slate-800 mb-5">Nouvelle transaction</h2>
 
       {/* Sélecteur type */}
-      <div className="flex bg-slate-100 rounded-xl p-1 mb-5">
+      <div className="flex bg-slate-100 rounded-xl p-1 mb-4">
         <button
           type="button"
           onClick={() => handleTypeChange('expense')}
@@ -56,6 +111,45 @@ export default function TransactionForm({ onAdd }) {
           Revenu
         </button>
       </div>
+
+      {/* Modèles récurrents */}
+      {visibleTemplates.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Modèles</p>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className="flex gap-2 pb-1 w-max">
+              {visibleTemplates.map(tpl => (
+                <div key={tpl.id} className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate(tpl)}
+                    className="flex items-center gap-2 px-3 py-2 active:bg-slate-50"
+                  >
+                    <span className="text-lg">{ICONS[tpl.category] ?? '💳'}</span>
+                    <div className="text-left">
+                      <p className="text-xs font-semibold text-slate-700 max-w-[80px] truncate">
+                        {tpl.description || tpl.category}
+                      </p>
+                      <p className={`text-xs font-bold ${tpl.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {fmt(tpl.amount)}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteTemplate(tpl.id)}
+                    className="px-2 py-2 text-slate-300 hover:text-rose-400 transition-colors border-l border-slate-100"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Montant */}
@@ -115,6 +209,19 @@ export default function TransactionForm({ onAdd }) {
             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+
+        {/* Sauvegarder comme modèle */}
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div
+            onClick={() => setSaveAsRecurring(v => !v)}
+            className={`w-10 h-6 rounded-full transition-colors shrink-0 ${saveAsRecurring ? 'bg-blue-500' : 'bg-slate-200'}`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${saveAsRecurring ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+          </div>
+          <span className="text-sm text-slate-600">
+            {justSaved ? '✓ Modèle sauvegardé' : 'Sauvegarder comme modèle récurrent'}
+          </span>
+        </label>
 
         <button
           type="submit"
