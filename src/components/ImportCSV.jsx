@@ -1,24 +1,25 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 
-const INCOME_CATS = ['Salaire', 'Freelance', 'Investissements', 'Autres revenus']
+const INCOME_CATS  = ['Salaire', 'Freelance', 'Investissements', 'Autres revenus']
 const EXPENSE_CATS = ['Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs', 'Shopping', 'Abonnements', 'Sorties', 'Autres']
+const ALL_CATS     = [...INCOME_CATS, ...EXPENSE_CATS]
 
 const RULES = [
-  { p: /SALAIRE|PAIE\b|TRAITEMENT|APPOINTEMENT/i,               type: 'income',  cat: 'Salaire' },
-  { p: /CAF\b|APL\b|RSA\b|PRIME.ACTIVITE|AIDE.LOGEMENT/i,      type: 'income',  cat: 'Autres revenus' },
+  { p: /SALAIRE|PAIE\b|TRAITEMENT|APPOINTEMENT/i,                                      type: 'income',  cat: 'Salaire' },
+  { p: /CAF\b|APL\b|RSA\b|PRIME.ACTIVITE|AIDE.LOGEMENT/i,                             type: 'income',  cat: 'Autres revenus' },
   { p: /CARREFOUR|LECLERC|LIDL|ALDI|INTERMARCHE|SUPER.?U|CASINO|MONOPRIX|FRANPRIX|AUCHAN|PICARD|BIOCOOP|CORA\b|NETTO\b/i, type: 'expense', cat: 'Alimentation' },
-  { p: /BOULANGERIE|BOULANG|PATISSERIE|EPICERIE|FRUITS.LEG/i,   type: 'expense', cat: 'Alimentation' },
-  { p: /SNCF|RATP|TRANSILIEN|KEOLIS|TISSÉO|NAVIGO|VELIB|TIER\b/i, type: 'expense', cat: 'Transport' },
-  { p: /TOTAL\b|BP\b|ESSO|SHELL|LECLERC.CARB|STATION|AUTOROUTE|VINCI.AUTOROUTE/i, type: 'expense', cat: 'Transport' },
-  { p: /UBER\b|LYFT|TAXI|BLABLACAR|FLIXBUS|OUIBUS/i,           type: 'expense', cat: 'Transport' },
-  { p: /EDF\b|ENEDIS|GDF\b|SUEZ\b|VEOLIA|GAZ\b|ELECTRICITE|FIOUL/i, type: 'expense', cat: 'Logement' },
-  { p: /LOYER|BAIL|CHARGES.COPRO|SYNDIC|CREDIT.IMMO|PRET.IMMO/i, type: 'expense', cat: 'Logement' },
-  { p: /MAIF\b|MATMUT|AXA\b|ALLIANZ|MMA\b|MACIF|GROUPAMA|ASSURANCE/i, type: 'expense', cat: 'Logement' },
-  { p: /PHARMACIE|PHARMA|MEDECIN|DOCTEUR|HOPITAL|CLINIQUE|CPAM|MUTUELLE|DENTISTE|OPTICIEN|KINÉ|KINE\b/i, type: 'expense', cat: 'Santé' },
-  { p: /NETFLIX|SPOTIFY|DEEZER|DISNEY\+|CANAL\+|AMAZON.PRIME|APPLE.ONE|YOUTUBE.PREMIUM/i, type: 'expense', cat: 'Abonnements' },
-  { p: /SFR\b|ORANGE\b|FREE\b|BOUYGUES|SOSH\b|B&YOU|NRJ.MOBILE|NUMERICABLE/i, type: 'expense', cat: 'Abonnements' },
-  { p: /AMAZON|FNAC\b|DARTY|H&M\b|ZARA\b|PRIMARK|ZALANDO|SHEIN|ASOS\b|CDISCOUNT/i, type: 'expense', cat: 'Shopping' },
-  { p: /CINEMA|THEATRE|CONCERT|SALLE.SPORT|PISCINE|MUSEE|BOWLING|KARTING/i, type: 'expense', cat: 'Loisirs' },
+  { p: /BOULANGERIE|PATISSERIE|EPICERIE|FRUITS.LEG|PRIMEUR/i,                          type: 'expense', cat: 'Alimentation' },
+  { p: /SNCF|RATP|TRANSILIEN|KEOLIS|NAVIGO|VELIB|TIER\b|FLIXBUS|OUIBUS/i,             type: 'expense', cat: 'Transport' },
+  { p: /TOTAL\b|BP\b|ESSO|SHELL|LECLERC.CARB|STATION|AUTOROUTE|VINCI/i,               type: 'expense', cat: 'Transport' },
+  { p: /UBER\b|LYFT|TAXI|BLABLACAR/i,                                                  type: 'expense', cat: 'Transport' },
+  { p: /EDF\b|ENEDIS|GDF\b|SUEZ\b|VEOLIA|GAZ\b|ELECTRICITE|FIOUL/i,                  type: 'expense', cat: 'Logement' },
+  { p: /LOYER|BAIL|CHARGES.COPRO|SYNDIC|CREDIT.IMMO|PRET.IMMO/i,                      type: 'expense', cat: 'Logement' },
+  { p: /MAIF\b|MATMUT|AXA\b|ALLIANZ|MMA\b|MACIF|GROUPAMA|ASSURANCE/i,                type: 'expense', cat: 'Logement' },
+  { p: /PHARMACIE|PHARMA|MEDECIN|DOCTEUR|HOPITAL|CLINIQUE|CPAM|MUTUELLE|DENTISTE|OPTICIEN|KIN[EÉ]/i, type: 'expense', cat: 'Santé' },
+  { p: /NETFLIX|SPOTIFY|DEEZER|DISNEY|CANAL\+|AMAZON.PRIME|APPLE|YOUTUBE/i,           type: 'expense', cat: 'Abonnements' },
+  { p: /SFR\b|ORANGE\b|FREE\b|BOUYGUES|SOSH\b|B&YOU|NRJ.MOBILE|NUMERICABLE/i,        type: 'expense', cat: 'Abonnements' },
+  { p: /AMAZON|FNAC\b|DARTY|H&M\b|ZARA\b|PRIMARK|ZALANDO|SHEIN|ASOS\b|CDISCOUNT/i,  type: 'expense', cat: 'Shopping' },
+  { p: /CINEMA|THEATRE|CONCERT|SALLE.SPORT|PISCINE|MUSEE|BOWLING/i,                   type: 'expense', cat: 'Loisirs' },
   { p: /RESTAURANT|BISTROT|BRASSERIE|PIZZERIA|MCDO|MCDONALD|KFC\b|BURGER|STARBUCKS|PAUL\b|SUSHI/i, type: 'expense', cat: 'Sorties' },
 ]
 
@@ -30,12 +31,12 @@ function autoCategory(libelle, type) {
 }
 
 function parseAmount(str) {
-  if (!str || !str.trim()) return 0
+  if (!str?.trim()) return 0
   return parseFloat(str.replace(/\s/g, '').replace(',', '.')) || 0
 }
 
 function parseDate(str) {
-  const m = str.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  const m = str?.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (!m) return null
   return `${m[3]}-${m[2]}-${m[1]}`
 }
@@ -46,20 +47,19 @@ function parseCSV(text) {
   let sep = ';'
 
   for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    if (/date/i.test(l) && /libell/i.test(l)) {
+    if (/date/i.test(lines[i]) && /libell/i.test(lines[i])) {
       headerIdx = i
-      sep = l.includes(';') ? ';' : ','
+      sep = lines[i].includes(';') ? ';' : ','
       break
     }
   }
-  if (headerIdx === -1) throw new Error('En-tête introuvable — vérifie que c\'est bien un export Crédit Agricole.')
+  if (headerIdx === -1) throw new Error("En-tête introuvable. Vérifie que c'est bien un export Crédit Agricole.")
 
   const headers = lines[headerIdx].split(sep).map(h => h.replace(/"/g, '').trim())
-  const dateIdx    = headers.findIndex(h => /^date$/i.test(h))
-  const libIdx     = headers.findIndex(h => /libell/i.test(h))
-  const debitIdx   = headers.findIndex(h => /d[eé]bit/i.test(h))
-  const creditIdx  = headers.findIndex(h => /cr[eé]dit/i.test(h))
+  const dateIdx   = headers.findIndex(h => /^date$/i.test(h))
+  const libIdx    = headers.findIndex(h => /libell/i.test(h))
+  const debitIdx  = headers.findIndex(h => /d[eé]bit/i.test(h))
+  const creditIdx = headers.findIndex(h => /cr[eé]dit/i.test(h))
 
   if (dateIdx === -1 || libIdx === -1) throw new Error('Colonnes Date ou Libellé introuvables.')
 
@@ -69,7 +69,7 @@ function parseCSV(text) {
     if (!line) continue
     const cols = line.split(sep).map(c => c.replace(/"/g, '').trim())
 
-    const date = parseDate(cols[dateIdx] || '')
+    const date    = parseDate(cols[dateIdx] || '')
     const libelle = cols[libIdx] || ''
     if (!date || !libelle) continue
 
@@ -82,18 +82,24 @@ function parseCSV(text) {
       txs.push({ date, description: libelle, amount: credit, type: 'income',  category: autoCategory(libelle, 'income') })
     }
   }
-  if (txs.length === 0) throw new Error('Aucune transaction trouvée dans ce fichier.')
+  if (txs.length === 0) throw new Error('Aucune transaction trouvée.')
   return txs
 }
 
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
-const fmtDate = (s) => new Date(s + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })
+
+const CAT_ICONS = {
+  'Salaire':'💼','Freelance':'💻','Investissements':'📈','Autres revenus':'💰',
+  'Alimentation':'🛒','Transport':'🚗','Logement':'🏠','Santé':'🏥',
+  'Loisirs':'🎮','Shopping':'🛍️','Abonnements':'📱','Sorties':'🍽️','Autres':'📦',
+}
 
 export default function ImportCSV({ onImport, onClose }) {
   const [step, setStep]       = useState('upload')
   const [rows, setRows]       = useState([])
-  const [checked, setChecked] = useState(new Set())
+  const [remap, setRemap]     = useState({})  // { 'originalCat': 'newCat' }
   const [error, setError]     = useState('')
+  const [importedCount, setImportedCount] = useState(0)
   const fileRef = useRef()
 
   const handleFile = (e) => {
@@ -104,9 +110,8 @@ export default function ImportCSV({ onImport, onClose }) {
     reader.onload = (ev) => {
       try {
         const txs = parseCSV(ev.target.result)
-        const withIds = txs.map((t, i) => ({ ...t, _id: String(i) }))
-        setRows(withIds)
-        setChecked(new Set(withIds.map(t => t._id)))
+        setRows(txs)
+        setRemap({})
         setStep('preview')
       } catch (err) {
         setError(err.message)
@@ -115,34 +120,50 @@ export default function ImportCSV({ onImport, onClose }) {
     reader.readAsText(file, 'latin1')
   }
 
-  const toggle = (id) => setChecked(prev => {
-    const next = new Set(prev)
-    next.has(id) ? next.delete(id) : next.add(id)
-    return next
-  })
+  // Résumé groupé par catégorie (applique les remappings)
+  const summary = useMemo(() => {
+    const map = {}
+    for (const r of rows) {
+      const cat = remap[r.category] ?? r.category
+      const key = `${r.type}|${cat}`
+      if (!map[key]) map[key] = { type: r.type, category: cat, originalCat: r.category, count: 0, total: 0 }
+      map[key].count++
+      map[key].total += r.amount
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [rows, remap])
 
-  const toggleAll = () => {
-    checked.size === rows.length ? setChecked(new Set()) : setChecked(new Set(rows.map(r => r._id)))
-  }
+  const dateRange = useMemo(() => {
+    if (!rows.length) return ''
+    const dates = rows.map(r => r.date).sort()
+    const fmt2 = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+    const first = fmt2(dates[0])
+    const last  = fmt2(dates[dates.length - 1])
+    return first === last ? first : `${first} → ${last}`
+  }, [rows])
 
-  const updateCategory = (id, cat) => {
-    setRows(prev => prev.map(r => r._id === id ? { ...r, category: cat } : r))
+  const totalIncome  = useMemo(() => rows.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0), [rows])
+  const totalExpense = useMemo(() => rows.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0), [rows])
+
+  const handleRemap = (originalCat, newCat) => {
+    setRemap(prev => ({ ...prev, [originalCat]: newCat }))
   }
 
   const handleImport = () => {
-    const toImport = rows
-      .filter(r => checked.has(r._id))
-      .map(({ _id, ...t }) => ({ ...t, id: `${Date.now()}-${_id}` }))
+    const toImport = rows.map(r => ({
+      ...r,
+      category: remap[r.category] ?? r.category,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }))
+    setImportedCount(toImport.length)
     onImport(toImport)
     setStep('done')
   }
 
-  const selectedCount = checked.size
-
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
         <button onClick={onClose} className="text-slate-400 p-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -152,7 +173,7 @@ export default function ImportCSV({ onImport, onClose }) {
         <div className="w-8" />
       </div>
 
-      {/* Step : upload */}
+      {/* ── UPLOAD ── */}
       {step === 'upload' && (
         <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5">
           <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
@@ -164,7 +185,7 @@ export default function ImportCSV({ onImport, onClose }) {
             <p className="font-semibold text-slate-800 mb-1">Sélectionner ton fichier CSV</p>
             <p className="text-slate-400 text-sm">Export Crédit Agricole · Format .csv</p>
           </div>
-          {error && <p className="text-rose-600 text-sm text-center bg-rose-50 px-4 py-2 rounded-xl">{error}</p>}
+          {error && <p className="text-rose-600 text-sm text-center bg-rose-50 px-4 py-3 rounded-xl">{error}</p>}
           <button
             onClick={() => fileRef.current.click()}
             className="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-semibold active:opacity-80"
@@ -172,77 +193,79 @@ export default function ImportCSV({ onImport, onClose }) {
             Choisir le fichier
           </button>
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFile} />
-          <p className="text-slate-400 text-xs text-center">
-            Dans l'app Crédit Agricole :<br />Comptes → Relevé → Télécharger → CSV
+          <p className="text-slate-400 text-xs text-center leading-relaxed">
+            Dans l'appli Crédit Agricole :<br />
+            Comptes → Relevé → Télécharger → CSV
           </p>
         </div>
       )}
 
-      {/* Step : preview */}
+      {/* ── PREVIEW ── */}
       {step === 'preview' && (
         <>
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-100">
-            <button onClick={toggleAll} className="text-blue-600 text-sm font-medium">
-              {checked.size === rows.length ? 'Tout décocher' : 'Tout cocher'}
-            </button>
-            <p className="text-slate-500 text-sm">{selectedCount} / {rows.length} transaction{rows.length > 1 ? 's' : ''}</p>
+          {/* Résumé global */}
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-semibold text-slate-800">{rows.length} transactions</p>
+              <p className="text-slate-400 text-sm">{dateRange}</p>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1 bg-emerald-50 rounded-xl px-3 py-2">
+                <p className="text-xs text-emerald-600 mb-0.5">Revenus</p>
+                <p className="font-bold text-emerald-700 text-sm">{fmt(totalIncome)}</p>
+              </div>
+              <div className="flex-1 bg-rose-50 rounded-xl px-3 py-2">
+                <p className="text-xs text-rose-600 mb-0.5">Dépenses</p>
+                <p className="font-bold text-rose-700 text-sm">{fmt(totalExpense)}</p>
+              </div>
+            </div>
           </div>
 
+          <p className="px-4 pt-3 pb-1 text-xs text-slate-400 shrink-0">
+            Tu peux ajuster les catégories avant d'importer
+          </p>
+
+          {/* Liste groupée par catégorie */}
           <div className="flex-1 overflow-y-auto">
-            {rows.map(r => {
-              const cats = r.type === 'income' ? INCOME_CATS : EXPENSE_CATS
+            {summary.map(g => {
+              const cats = g.type === 'income' ? INCOME_CATS : EXPENSE_CATS
               return (
-                <div
-                  key={r._id}
-                  className={`flex items-start gap-3 px-4 py-3 border-b border-slate-50 transition-opacity ${!checked.has(r._id) ? 'opacity-40' : ''}`}
-                >
-                  <button onClick={() => toggle(r._id)} className="mt-1 shrink-0">
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                      checked.has(r._id) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                    }`}>
-                      {checked.has(r._id) && (
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
+                <div key={`${g.type}|${g.category}`} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50">
+                  <span className="text-2xl shrink-0">{CAT_ICONS[g.category] ?? '💳'}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-slate-800 text-sm font-medium truncate">{r.description}</p>
-                      <p className={`text-sm font-semibold shrink-0 ${r.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {r.type === 'income' ? '+' : '−'}{fmt(r.amount)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-slate-400 text-xs shrink-0">{fmtDate(r.date)}</p>
-                      <select
-                        value={r.category}
-                        onChange={e => updateCategory(r._id, e.target.value)}
-                        className="text-xs text-slate-500 bg-slate-100 rounded-lg px-2 py-0.5 border-0 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      >
-                        {cats.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
+                    <select
+                      value={g.category}
+                      onChange={e => {
+                        // trouve la catégorie originale pour ce groupe
+                        const origCat = Object.keys(remap).find(k => (remap[k] ?? k) === g.category) ?? g.category
+                        handleRemap(origCat, e.target.value)
+                      }}
+                      className="text-sm font-medium text-slate-800 bg-transparent border-0 focus:outline-none focus:ring-0 p-0 w-full"
+                    >
+                      {ALL_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <p className="text-xs text-slate-400">{g.count} transaction{g.count > 1 ? 's' : ''}</p>
                   </div>
+                  <p className={`text-sm font-semibold shrink-0 ${g.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {g.type === 'income' ? '+' : '−'}{fmt(g.total)}
+                  </p>
                 </div>
               )
             })}
           </div>
 
-          <div className="p-4 border-t border-slate-100" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+          <div className="p-4 border-t border-slate-100 shrink-0" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
             <button
               onClick={handleImport}
-              disabled={selectedCount === 0}
-              className="w-full py-4 rounded-xl text-white font-semibold bg-blue-600 disabled:opacity-40 active:opacity-80"
+              className="w-full py-4 rounded-xl text-white font-semibold bg-blue-600 active:opacity-80"
             >
-              Importer {selectedCount} transaction{selectedCount > 1 ? 's' : ''}
+              Importer {rows.length} transactions
             </button>
           </div>
         </>
       )}
 
-      {/* Step : done */}
+      {/* ── DONE ── */}
       {step === 'done' && (
         <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 text-center">
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
@@ -251,7 +274,7 @@ export default function ImportCSV({ onImport, onClose }) {
             </svg>
           </div>
           <p className="font-bold text-slate-800 text-lg">Import réussi !</p>
-          <p className="text-slate-500 text-sm">{selectedCount} transaction{selectedCount > 1 ? 's' : ''} ajoutée{selectedCount > 1 ? 's' : ''}</p>
+          <p className="text-slate-500 text-sm">{importedCount} transaction{importedCount > 1 ? 's' : ''} ajoutée{importedCount > 1 ? 's' : ''}</p>
           <button onClick={onClose} className="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-semibold mt-2 active:opacity-80">
             Voir mes transactions
           </button>
