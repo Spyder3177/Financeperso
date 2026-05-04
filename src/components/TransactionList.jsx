@@ -24,7 +24,7 @@ const ICONS = {
   'Loisirs': '🎮', 'Shopping': '🛍️', 'Abonnements': '📱', 'Sorties': '🍽️', 'Autres': '📦',
 }
 
-export default function TransactionList({ transactions, onDelete }) {
+export default function TransactionList({ transactions, onDelete, onImport }) {
   const [selectedMonth, setSelectedMonth] = useState(currentYearMonth())
   const [pendingDelete, setPendingDelete] = useState(null)
 
@@ -57,7 +57,18 @@ export default function TransactionList({ transactions, onDelete }) {
 
   return (
     <div className="p-4 space-y-4">
-      <h2 className="text-lg font-bold text-slate-800">Historique</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-slate-800">Historique</h2>
+        <button
+          onClick={onImport}
+          className="flex items-center gap-1.5 text-blue-600 text-sm font-semibold bg-blue-50 px-3 py-1.5 rounded-xl active:opacity-70"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          Importer CSV
+        </button>
+      </div>
 
       {/* Sélecteur de mois */}
       {availableMonths.length > 0 ? (

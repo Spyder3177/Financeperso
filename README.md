@@ -4,7 +4,7 @@ Application de gestion des finances personnelles — PWA installable sur iPhone 
 
 ---
 
-## Version actuelle : 1.0.0 (04/05/2026)
+## Version actuelle : 1.1.0 (04/05/2026)
 
 ---
 
@@ -37,6 +37,20 @@ npm run preview
 ---
 
 ## Historique des versions
+
+### Version 1.1.0 — 04/05/2026 — Import CSV Crédit Agricole
+
+**Import CSV (`Historique → Importer CSV`)**
+- Chargement d'un fichier export CSV Crédit Agricole
+- Détection automatique de l'en-tête (ignore les lignes de compte en haut du fichier)
+- Lecture des colonnes Date, Libellé, Débit euros, Crédit euros
+- Conversion automatique du format français (virgule décimale, date JJ/MM/AAAA)
+- Catégorisation automatique des transactions selon le libellé (30+ règles : supermarchés, transport, abonnements, santé…)
+- Aperçu de toutes les transactions avant import avec possibilité de modifier la catégorie
+- Sélection/désélection individuelle ou globale
+- Déduplication : les transactions déjà présentes ne sont pas importées en double
+
+---
 
 ### Version 1.0.0 — 04/05/2026 — Version initiale
 

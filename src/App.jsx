@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard'
 import TransactionForm from './components/TransactionForm'
 import TransactionList from './components/TransactionList'
 import BottomNav from './components/BottomNav'
+import ImportCSV from './components/ImportCSV'
 
 const STORAGE_KEY = 'financeperso_v1'
 
@@ -17,6 +18,7 @@ export default function App() {
     }
   })
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions))
@@ -31,6 +33,15 @@ export default function App() {
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
+  const importTransactions = (txs) => {
+    setTransactions(prev => {
+      const existingKeys = new Set(prev.map(t => `${t.date}|${t.amount}|${t.description}`))
+      const deduped = txs.filter(t => !existingKeys.has(`${t.date}|${t.amount}|${t.description}`))
+      return [...deduped, ...prev].sort((a, b) => b.date.localeCompare(a.date))
+    })
+    setActiveTab('history')
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col max-w-md mx-auto relative">
       <Header />
@@ -42,10 +53,21 @@ export default function App() {
           <TransactionForm onAdd={addTransaction} />
         )}
         {activeTab === 'history' && (
-          <TransactionList transactions={transactions} onDelete={deleteTransaction} />
+          <TransactionList
+            transactions={transactions}
+            onDelete={deleteTransaction}
+            onImport={() => setShowImport(true)}
+          />
         )}
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {showImport && (
+        <ImportCSV
+          onImport={importTransactions}
+          onClose={() => setShowImport(false)}
+        />
+      )}
     </div>
   )
 }
