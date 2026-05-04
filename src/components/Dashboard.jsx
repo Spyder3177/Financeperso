@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 const fmt = (amount) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -22,26 +22,56 @@ const ICONS = {
   'Loisirs': '🎮', 'Shopping': '🛍️', 'Abonnements': '📱', 'Sorties': '🍽️', 'Autres': '📦',
 }
 
-export default function Dashboard({ transactions, onAddClick }) {
+export default function Dashboard({ transactions, accounts, onAddClick }) {
   const ym = currentYearMonth()
+  const [activeAccount, setActiveAccount] = useState('all')
+
+  // Transactions filtrées par compte (sans account → premier compte par défaut)
+  const filtered = useMemo(() => {
+    if (activeAccount === 'all') return transactions
+    return transactions.filter(t =>
+      t.account === activeAccount || (!t.account && activeAccount === accounts[0]?.id)
+    )
+  }, [transactions, activeAccount, accounts])
 
   const stats = useMemo(() => {
-    const monthTx = transactions.filter(t => t.date.startsWith(ym))
-    const totalBalance = transactions.reduce(
+    const monthTx = filtered.filter(t => t.date.startsWith(ym))
+    const totalBalance = filtered.reduce(
       (s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0
     )
-    const monthIncome = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const monthIncome  = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const monthExpense = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     return { totalBalance, monthIncome, monthExpense, monthNet: monthIncome - monthExpense }
-  }, [transactions, ym])
+  }, [filtered, ym])
 
-  const recent = transactions.slice(0, 5)
+  const recent = filtered.slice(0, 5)
 
   return (
     <div className="p-4 space-y-4">
+      {/* Filtre par compte */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveAccount('all')}
+          className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+            activeAccount === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'
+          }`}
+        >Tous</button>
+        {accounts.map(a => (
+          <button
+            key={a.id}
+            onClick={() => setActiveAccount(a.id)}
+            className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+              activeAccount === a.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >{a.name}</button>
+        ))}
+      </div>
+
       {/* Solde total */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-        <p className="text-slate-400 text-sm mb-1">Solde total</p>
+        <p className="text-slate-400 text-sm mb-1">
+          {activeAccount === 'all' ? 'Solde total' : `Solde — ${accounts.find(a => a.id === activeAccount)?.name}`}
+        </p>
         <p className={`text-4xl font-bold tracking-tight ${stats.totalBalance >= 0 ? 'text-slate-800' : 'text-rose-600'}`}>
           {fmt(stats.totalBalance)}
         </p>
