@@ -32,7 +32,8 @@ function autoCategory(libelle, type) {
 
 function parseAmount(str) {
   if (!str?.trim()) return 0
-  return parseFloat(str.replace(/\s/g, '').replace(',', '.')) || 0
+  // Supprime espaces, séparateurs de milliers, puis remplace virgule par point
+  return parseFloat(str.replace(/\s/g, '').replace(/ /g, '').replace(',', '.')) || 0
 }
 
 function parseDate(str) {
@@ -41,48 +42,92 @@ function parseDate(str) {
   return `${m[3]}-${m[2]}-${m[1]}`
 }
 
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/)
-  let headerIdx = -1
-  let sep = ';'
+// Tokeniseur CSV complet : gère les champs quotés avec retours à la ligne internes
+function tokenizeCSV(text, sep) {
+  const rows = []
+  let row = []
+  let field = ''
+  let inQuote = false
+  const n = text.length
 
-  for (let i = 0; i < lines.length; i++) {
-    if (/date/i.test(lines[i]) && /libell/i.test(lines[i])) {
-      headerIdx = i
-      sep = lines[i].includes(';') ? ';' : ','
-      break
+  for (let i = 0; i < n; i++) {
+    const c = text[i]
+    if (c === '"') {
+      if (inQuote && text[i + 1] === '"') { field += '"'; i++ } // "" = guillemet échappé
+      else inQuote = !inQuote
+    } else if (c === sep && !inQuote) {
+      row.push(field.trim()); field = ''
+    } else if ((c === '\n' || c === '\r') && !inQuote) {
+      if (c === '\r' && text[i + 1] === '\n') i++
+      row.push(field.trim())
+      if (row.some(Boolean)) rows.push(row)
+      row = []; field = ''
+    } else {
+      field += c
     }
   }
-  if (headerIdx === -1) throw new Error("En-tête introuvable. Vérifie que c'est bien un export Crédit Agricole.")
+  if (field || row.length) { row.push(field.trim()); if (row.some(Boolean)) rows.push(row) }
+  return rows
+}
 
-  const headers = lines[headerIdx].split(sep).map(h => h.replace(/"/g, '').trim())
-  const dateIdx   = headers.findIndex(h => /^date$/i.test(h))
-  const libIdx    = headers.findIndex(h => /libell/i.test(h))
-  const debitIdx  = headers.findIndex(h => /d[eé]bit/i.test(h))
-  const creditIdx = headers.findIndex(h => /cr[eé]dit/i.test(h))
+function parseCSV(text) {
+  // Supprime le BOM UTF-8 si présent
+  const clean = text.replace(/^﻿/, '')
+
+  // Détecte le séparateur sur les 20 premières lignes
+  const sample = clean.slice(0, 2000)
+  const sep = (sample.match(/;/g) || []).length >= (sample.match(/,/g) || []).length ? ';' : ','
+
+  const allRows = tokenizeCSV(clean, sep)
+
+  // Trouve la ligne d'en-tête (contient "Date" en col 0 et "Libellé" quelque part)
+  let headerRowIdx = -1
+  for (let i = 0; i < allRows.length; i++) {
+    const r = allRows[i]
+    if (/^date$/i.test(r[0] || '') && r.some(h => /libell/i.test(h))) {
+      headerRowIdx = i; break
+    }
+  }
+  if (headerRowIdx === -1) throw new Error("En-tête introuvable. Vérifie que c'est bien un export Crédit Agricole.")
+
+  const headers = allRows[headerRowIdx]
+  const dateIdx    = headers.findIndex(h => /^date$/i.test(h))
+  const libIdx     = headers.findIndex(h => /libell/i.test(h))
+  // Regex volontairement larges pour résister aux encodages et variantes de libellés
+  const debitIdx   = headers.findIndex(h => /d.?bit/i.test(h))
+  const creditIdx  = headers.findIndex(h => /cr.?dit/i.test(h))
+  const montantIdx = headers.findIndex(h => /montant/i.test(h))
 
   if (dateIdx === -1 || libIdx === -1) throw new Error('Colonnes Date ou Libellé introuvables.')
 
   const txs = []
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue
-    const cols = line.split(sep).map(c => c.replace(/"/g, '').trim())
-
+  for (let i = headerRowIdx + 1; i < allRows.length; i++) {
+    const cols = allRows[i]
     const date    = parseDate(cols[dateIdx] || '')
-    const libelle = cols[libIdx] || ''
+    const libelle = (cols[libIdx] || '').replace(/\n/g, ' ').trim()
     if (!date || !libelle) continue
 
-    const debit  = debitIdx  >= 0 ? parseAmount(cols[debitIdx])  : 0
-    const credit = creditIdx >= 0 ? parseAmount(cols[creditIdx]) : 0
+    let amount = 0, type = null
 
-    if (debit > 0) {
-      txs.push({ date, description: libelle, amount: debit,  type: 'expense', category: autoCategory(libelle, 'expense') })
-    } else if (credit > 0) {
-      txs.push({ date, description: libelle, amount: credit, type: 'income',  category: autoCategory(libelle, 'income') })
+    if (montantIdx >= 0 && creditIdx < 0) {
+      // Format avec colonne Montant unique (valeur négative = dépense)
+      const v = parseAmount(cols[montantIdx] || '')
+      if (v > 0)  { amount = v;  type = 'income' }
+      if (v < 0)  { amount = -v; type = 'expense' }
+    } else {
+      const debit  = debitIdx  >= 0 ? parseAmount(cols[debitIdx]  || '') : 0
+      // Si pas de colonne crédit détectée, tente la 4e colonne (index 3) par défaut
+      const cIdx   = creditIdx >= 0 ? creditIdx : 3
+      const credit = cIdx < cols.length ? parseAmount(cols[cIdx] || '') : 0
+      if (debit  > 0) { amount = debit;  type = 'expense' }
+      if (credit > 0) { amount = credit; type = 'income' }
+    }
+
+    if (type && amount > 0) {
+      txs.push({ date, description: libelle, amount, type, category: autoCategory(libelle, type) })
     }
   }
-  if (txs.length === 0) throw new Error('Aucune transaction trouvée.')
+  if (txs.length === 0) throw new Error('Aucune transaction trouvée. Le fichier est peut-être vide ou dans un format inattendu.')
   return txs
 }
 
