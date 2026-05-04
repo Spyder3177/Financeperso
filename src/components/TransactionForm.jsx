@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react'
+import { getIconForCat } from '../categories'
 
-const INCOME_CATS = ['Salaire', 'Freelance', 'Investissements', 'Autres revenus']
-const EXPENSE_CATS = ['Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs', 'Shopping', 'Abonnements', 'Sorties', 'Autres']
 const RECURRING_KEY = 'financeperso_recurring_v1'
 
 const fmt = (amount) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
-
-const ICONS = {
-  'Salaire': '💼', 'Freelance': '💻', 'Investissements': '📈', 'Autres revenus': '💰',
-  'Alimentation': '🛒', 'Transport': '🚗', 'Logement': '🏠', 'Santé': '🏥',
-  'Loisirs': '🎮', 'Shopping': '🛍️', 'Abonnements': '📱', 'Sorties': '🍽️', 'Autres': '📦',
-}
 
 const todayStr = () => new Date().toISOString().split('T')[0]
 
@@ -26,7 +19,7 @@ const saveTemplates = (list) => {
   localStorage.setItem(RECURRING_KEY, JSON.stringify(list))
 }
 
-export default function TransactionForm({ onAdd, accounts }) {
+export default function TransactionForm({ onAdd, accounts, expenseCats, incomeCats, customExpenseCats = [] }) {
   const [type, setType] = useState('expense')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -37,7 +30,7 @@ export default function TransactionForm({ onAdd, accounts }) {
   const [templates, setTemplates] = useState(loadTemplates)
   const [justSaved, setJustSaved] = useState(false)
 
-  const categories = type === 'income' ? INCOME_CATS : EXPENSE_CATS
+  const categories = type === 'income' ? incomeCats : expenseCats
   const visibleTemplates = templates.filter(t => t.type === type)
 
   const handleTypeChange = (t) => {
@@ -137,7 +130,7 @@ export default function TransactionForm({ onAdd, accounts }) {
                     onClick={() => applyTemplate(tpl)}
                     className="flex items-center gap-2 px-3 py-2 active:bg-slate-50"
                   >
-                    <span className="text-lg">{ICONS[tpl.category] ?? '💳'}</span>
+                    <span className="text-lg">{getIconForCat(tpl.category, customExpenseCats)}</span>
                     <div className="text-left">
                       <p className="text-xs font-semibold text-slate-700 max-w-[80px] truncate">
                         {tpl.description || tpl.category}
